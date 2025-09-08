@@ -1,0 +1,8 @@
+{
+  "baseUrl": "https://pokeapi.co",
+  "requestName": "Public GET Test (PokeAPI)",
+  "requestMethod": "GET",
+  "endpoint": "/api/v2/pokemon/ditto",
+  "testType": "smoke",
+  "timestamp": "2025-09-08T08:25:10.897Z"
+}

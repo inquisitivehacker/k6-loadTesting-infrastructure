@@ -1,33 +1,32 @@
-Of course. Here is the complete and updated `dashboard.html` file with the corrected filename in the `fetch` request.
-
-You can replace your existing file with this content. The only change is on line 223.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale-1" />
   <title>Third Eye Creative — Automated Performance Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
     :root{
-      --primary: #2d6cdf;         /* JMeter-ish accent */
-      --muted: #667085;           /* neutral text */
-      --border: #e6e6e6;          /* table borders */
-      --bg: #ffffff;              /* clean white */
-      --card: #fafafa;            /* light card */
-      --success: #4088d9;         /* blue */
-      --danger: #ef4444;          /* red */
+      --primary: #2d6cdf; --muted: #667085; --border: #e6e6e6;
+      --bg: #ffffff; --card: #fafafa;
+      --success: #4088d9;         /* Bluish color */
+      --danger: #ef4444;          /* Red color */
     }
     html,body{background:var(--bg); color:#111; font:14px/1.5 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";}
     .container{max-width:1180px; margin:24px auto 48px; padding:0 16px;}
-    header{display:flex; align-items:center; justify-content:space-between; gap:16px; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;}
+    header{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;}
     .brand{display:flex; align-items:center; gap:12px;}
     .logo{width:36px; height:36px; border-radius:8px; background:linear-gradient(135deg,var(--primary),#9ec5ff); box-shadow:0 3px 14px rgba(45,108,223,.25);}
     h1{font-size:18px; margin:0;}
     .sub{font-size:12px; color:var(--muted); margin-top:2px;}
-    .meta{display:flex; flex-direction:column; align-items:flex-end;}
+    .meta{
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 2px 12px;
+        font-size: 12px;
+        color: var(--muted);
+    }
+    .meta strong { color: #111; }
     .card{background:#fff; border:1px solid var(--border); border-radius:12px; padding:14px 14px 10px;}
     .grid{display:grid; gap:16px;}
     .grid.kpis{grid-template-columns:repeat(4,1fr);} 
@@ -61,8 +60,12 @@ You can replace your existing file with this content. The only change is on line
         </div>
       </div>
       <div class="meta">
-        <div class="sub"><strong>Date:</strong> <span id="report-date"></span></div>
-        <div class="sub"><strong>Test:</strong> <span id="test-name">—</span></div>
+        <strong>API Name:</strong>     <span id="meta-name">—</span>
+        <strong>Test Type:</strong>    <span id="meta-test-type">—</span>
+        <strong>Method:</strong>       <span id="meta-method">—</span>
+        <strong>Base URL:</strong>     <span id="meta-base-url">—</span>
+        <strong>Endpoint:</strong>     <span id="meta-endpoint">—</span>
+        <strong>Date:</strong>         <span id="meta-date">—</span>
       </div>
     </header>
 
@@ -78,44 +81,16 @@ You can replace your existing file with this content. The only change is on line
     </section>
 
     <section class="grid charts" style="margin-top:12px;">
-      <div class="card">
-        <h3>Throughput Overview</h3>
-        <div class="chart-wrap"><canvas id="bar-overview"></canvas></div>
-      </div>
-      <div class="card">
-        <h3>Iteration Duration (avg, p90, p95)</h3>
-        <div class="chart-wrap"><canvas id="line-iter"></canvas></div>
-      </div>
-      <div class="card">
-        <h3>HTTP Request Duration (avg, p90, p95)</h3>
-        <div class="chart-wrap"><canvas id="line-http"></canvas></div>
-      </div>
-      <div class="card">
-        <h3>Checks: Pass vs Fail</h3>
-        <div class="chart-wrap"><canvas id="pie-checks"></canvas></div>
-      </div>
+      <div class="card"><h3>Throughput Overview</h3><div class="chart-wrap"><canvas id="bar-overview"></canvas></div></div>
+      <div class="card"><h3>Iteration Duration (avg, p90, p95)</h3><div class="chart-wrap"><canvas id="line-iter"></canvas></div></div>
+      <div class="card"><h3>HTTP Request Duration (avg, p90, p95)</h3><div class="chart-wrap"><canvas id="line-http"></canvas></div></div>
+      <div class="card"><h3>Checks: Pass vs Fail</h3><div class="chart-wrap"><canvas id="pie-checks"></canvas></div></div>
     </section>
 
     <section class="card" style="margin-top:12px;">
       <h3>Aggregate Report</h3>
       <div class="sub" style="margin-bottom:8px;">Structured like JMeter's Aggregate Report for key metrics.</div>
-      <div class="table-wrap">
-        <table id="agg-table">
-          <thead>
-            <tr>
-              <th>Metric</th>
-              <th>avg</th>
-              <th>min</th>
-              <th>med</th>
-              <th>max</th>
-              <th>p90</th>
-              <th>p95</th>
-              <th>count</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+      <div class="table-wrap"><table id="agg-table"><thead><tr><th>Metric</th><th>avg</th><th>min</th><th>med</th><th>max</th><th>p90</th><th>p95</th><th>count</th></tr></thead><tbody></tbody></table></div>
     </section>
 
     <footer class="sub" style="margin-top:14px; color:var(--muted);">Theme inspired by Apache JMeter HTML Dashboard. Print for A4 from your browser (File → Print).</footer>
@@ -128,29 +103,20 @@ You can replace your existing file with this content. The only change is on line
   const fmtMs  = (n)=> (isFinite(n) ? (Math.round(n*100)/100).toLocaleString() : '—');
   const fmtPct = (n)=> (isFinite(n) ? (n*100).toFixed(2)+"%" : '—');
 
-  // Page meta
-  $('#report-date').textContent = new Intl.DateTimeFormat(undefined,{year:'numeric',month:'short',day:'2-digit', hour: '2-digit', minute: '2-digit'}).format(new Date());
-
   function parseCSV(text){
     const rows = text.replace(/\r/g,'').trim().split(/\n+/);
     if(!rows.length) return {};
     const header = rows.shift().split(',').map(s=>s.trim());
-    const idx = {
-      metric: header.indexOf('metric'),
-      type: header.indexOf('type'),
-      value: header.indexOf('value')
-    };
+    const idx = { metric: header.indexOf('metric'), type: header.indexOf('type'), value: header.indexOf('value') };
     const data = {};
     for(const r of rows){
       const parts = r.split(',');
       if(parts.length < 3) continue;
       const metric = parts[idx.metric]?.trim().replace(/{.*/, '');
       const mtype  = parts[idx.type]?.trim();
-      let kv       = parts[idx.value]?.trim();
+      let kv = parts[idx.value]?.trim();
       if(!metric || !mtype || !kv) continue;
-      if (kv.startsWith('"') && kv.endsWith('"')) {
-        kv = kv.slice(1, -1);
-      }
+      if (kv.startsWith('"') && kv.endsWith('"')) kv = kv.slice(1, -1);
       const [key, rawVal] = kv.split('=');
       const value = Number(rawVal);
       if(!data[metric]) data[metric] = {};
@@ -161,21 +127,30 @@ You can replace your existing file with this content. The only change is on line
   }
 
   function pick(obj, path, dflt){
-    try{
-      return path.reduce((o,k)=> (o && k in o) ? o[k] : undefined, obj) ?? dflt;
-    }catch{ return dflt; }
+    try{ return path.reduce((o,k)=> (o && k in o) ? o[k] : undefined, obj) ?? dflt; }
+    catch{ return dflt; }
+  }
+
+  function buildMeta(meta) {
+    $('#meta-name').textContent = meta.requestName || '—';
+    $('#meta-test-type').textContent = meta.testType ? meta.testType.charAt(0).toUpperCase() + meta.testType.slice(1) : '—';
+    $('#meta-method').textContent = meta.requestMethod || '—';
+    $('#meta-base-url').textContent = meta.baseUrl || '—';
+    $('#meta-endpoint').textContent = meta.endpoint || '—';
+    const date = meta.timestamp ? new Date(meta.timestamp) : new Date();
+    $('#meta-date').textContent = new Intl.DateTimeFormat(undefined, { year:'numeric', month:'short', day:'2-digit', hour: '2-digit', minute: '2-digit' }).format(date);
   }
 
   function buildKPIs(db){
-    const httpReqs = pick(db, ['http_reqs','counter','count'], undefined);
-    const iterations = pick(db, ['iterations','counter','count'], undefined);
-    const httpAvg = pick(db, ['http_req_duration','trend','avg'], undefined);
-    const httpP90 = pick(db, ['http_req_duration','trend','p(90)'], pick(db,['http_req_duration','trend','p90'], undefined));
-    const httpP95 = pick(db, ['http_req_duration','trend','p(95)'], pick(db,['http_req_duration','trend','p95'], undefined));
-    const failRate = pick(db, ['http_req_failed','rate','rate'], undefined);
-    const vusMax = pick(db, ['vus_max','gauge','value'], pick(db,['vus_max','gauge','max'], undefined));
-    const sent = pick(db,['data_sent','counter','count'], pick(db,['bytes_sent','counter','count'], undefined));
-    const recv = pick(db,['data_received','counter','count'], pick(db,['bytes_received','counter','count'], undefined));
+    const httpReqs = pick(db, ['http_reqs','counter','count']);
+    const iterations = pick(db, ['iterations','counter','count']);
+    const httpAvg = pick(db, ['http_req_duration','trend','avg']);
+    const httpP90 = pick(db, ['http_req_duration','trend','p(90)'], pick(db,['http_req_duration','trend','p90']));
+    const httpP95 = pick(db, ['http_req_duration','trend','p(95)'], pick(db,['http_req_duration','trend','p95']));
+    const failRate = pick(db, ['http_req_failed','rate','rate']);
+    const vusMax = pick(db, ['vus_max','gauge','value'], pick(db,['vus_max','gauge','max']));
+    const sent = pick(db,['data_sent','counter','count'], pick(db,['bytes_sent','counter','count']));
+    const recv = pick(db,['data_received','counter','count'], pick(db,['bytes_received','counter','count']));
     $('#kpi-reqs').textContent = fmtInt(httpReqs);
     $('#kpi-iters').textContent = fmtInt(iterations);
     $('#kpi-avg').textContent = isFinite(httpAvg) ? fmtMs(httpAvg) + ' ms' : '—';
@@ -184,76 +159,69 @@ You can replace your existing file with this content. The only change is on line
     $('#kpi-vus').textContent = fmtInt(vusMax);
     $('#kpi-sent').textContent = fmtInt(sent);
     $('#kpi-recv').textContent = fmtInt(recv);
-    return { httpReqs, iterations, httpAvg, httpP90, httpP95, failRate, vusMax, sent, recv };
+    return { httpReqs, iterations, sent, recv };
   }
 
   function buildCharts(db, kpis){
-    const canvases = ['bar-overview', 'line-iter', 'line-http', 'pie-checks'];
-    for(const id of canvases){
-      const chart = Chart.getChart(id);
-      if(chart) chart.destroy();
-    }
+    // This function is now simplified to use direct color codes.
+    ['bar-overview', 'line-iter', 'line-http', 'pie-checks'].forEach(id => {
+        const chart = Chart.getChart(id); if(chart) chart.destroy();
+    });
     if(!window.Chart) return;
-    new Chart($('#bar-overview'), { type:'bar', data:{ labels:['Data Sent','Data Received','HTTP Requests','Iterations'], datasets:[{ label:'Count', data:[kpis.sent||0, kpis.recv||0, kpis.httpReqs||0, kpis.iterations||0] }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:true }, title:{ display:false } }, scales:{ y:{ beginAtZero:true } } } });
+    new Chart($('#bar-overview'), { type:'bar', data:{ labels:['Data Sent','Data Received','HTTP Requests','Iterations'], datasets:[{ label:'Count', data:[kpis.sent||0, kpis.recv||0, kpis.httpReqs||0, kpis.iterations||0] }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true } } } });
     const iter = db['iteration_duration']?.trend || {};
-    const iterSeries = ['avg','p(90)','p(95)'].map(k=> iter[k] ?? iter[k?.replace('(','').replace(')','')] );
-    new Chart($('#line-iter'), { type:'line', data:{ labels:['avg','p90','p95'], datasets:[{label:'iteration_duration (ms)', data: iterSeries.map(x=> x||0), tension:0.25}] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}} } });
+    const iterSeries = ['avg','p(90)','p(95)'].map(k=> iter[k] ?? iter[k?.replace(/[()]/g,'')] );
+    new Chart($('#line-iter'), { type:'line', data:{ labels:['avg','p90','p95'], datasets:[{label:'iteration_duration (ms)', data: iterSeries.map(x=> x||0), tension:0.25}] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} } });
     const http = db['http_req_duration']?.trend || {};
-    const httpSeries = ['avg','p(90)','p(95)'].map(k=> http[k] ?? http[k?.replace('(','').replace(')','')] );
-    new Chart($('#line-http'), { type:'line', data:{ labels:['avg','p90','p95'], datasets:[{label:'http_req_duration (ms)', data:httpSeries.map(x=> x||0), tension:0.25}] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}} } });
+    const httpSeries = ['avg','p(90)','p(95)'].map(k=> http[k] ?? http[k?.replace(/[()]/g,'')] );
+    new Chart($('#line-http'), { type:'line', data:{ labels:['avg','p90','p95'], datasets:[{label:'http_req_duration (ms)', data:httpSeries.map(x=> x||0), tension:0.25}] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} } });
     const passes = pick(db,['checks','rate','passes'], 0);
     const fails  = pick(db,['checks','rate','fails'], 0);
-    new Chart($('#pie-checks'), { type:'pie', data:{ labels:['Passes','Fails'], datasets:[{ data:[passes, fails], backgroundColor:['#5fb0e3', '#ef4444'] }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}} } });
+    
+    // --- FIX IS HERE ---
+    // We now use the direct hex color codes for blue and red.
+    new Chart($('#pie-checks'), { type:'pie', data:{ labels:['Passes','Fails'], datasets:[{ data:[passes, fails], backgroundColor:['#4088d9', '#ef4444'] }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}} } });
   }
-
   function buildAggregateTable(db){
     const tbody = document.querySelector('#agg-table tbody');
     tbody.innerHTML = '';
-    const candidates = ['http_req_duration', 'http_req_blocked', 'http_req_connecting', 'http_req_tls_handshaking', 'http_req_sending', 'http_req_waiting', 'http_req_receiving', 'iteration_duration', 'vus', 'vus_max', 'data_sent', 'data_received', 'http_reqs', 'iterations'];
-    function rowFor(metric){
-      const trend = db[metric]?.trend || {}; const counter = db[metric]?.counter || {}; const gauge = db[metric]?.gauge || {};
-      const avg = trend['avg'] ?? gauge['value']; const min = trend['min']; const med = trend['med']; const max = trend['max'] ?? gauge['max'];
-      const p90 = trend['p(90)'] ?? trend['p90']; const p95 = trend['p(95)'] ?? trend['p95']; const count = counter['count'];
+    const candidates = ['http_req_duration', 'http_req_blocked', 'http_req_connecting', 'http_req_tls_handshaking', 'http_req_sending', 'http_req_waiting', 'http_req_receiving', 'iteration_duration'];
+    const rowFor = (metric) => {
+      const trend = db[metric]?.trend || {}; const counter = db[metric]?.counter || {};
+      const avg=trend['avg'], min=trend['min'], med=trend['med'], max=trend['max'], p90=trend['p(90)']??trend['p90'], p95=trend['p(95)']??trend['p95'], count=counter['count'];
       if([avg,min,med,max,p90,p95,count].every(v=> v===undefined)) return null;
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${metric.replace(/_/g,' ')}</td><td>${fmtMs(avg)}</td><td>${fmtMs(min)}</td><td>${fmtMs(med)}</td><td>${fmtMs(max)}</td><td>${fmtMs(p90)}</td><td>${fmtMs(p95)}</td><td>${fmtInt(count)}</td>`;
       return tr;
     }
-    const seen = new Set();
-    for(const m of candidates){ if(db[m]){ const r = rowFor(m); if(r){ tbody.appendChild(r); seen.add(m);} } }
-    for(const m of Object.keys(db)){ if(seen.has(m)) continue; const r = rowFor(m); if(r) tbody.appendChild(r); }
+    candidates.forEach(m => { if(db[m]){ const r = rowFor(m); if(r) tbody.appendChild(r); } });
   }
 
-  function render(text, fileName){
-    const db = parseCSV(text);
-    const kpis = buildKPIs(db);
-    buildCharts(db, kpis);
-    buildAggregateTable(db);
-    $('#subtitle').textContent = 'Summary, KPIs, Charts & Aggregate Report';
-    $('#test-name').textContent = fileName;
-  }
-
-  // --- AUTOMATION LOGIC ---
   async function autoLoad() {
     try {
-      // Fetch the latest results file from the server, preventing caching.
-      const response = await fetch('latest_results.csv', { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error('Could not find latest_results.csv. Run a test first!');
-      }
-      const text = await response.text();
-      render(text, 'Latest Test Results');
+      const [csvResponse, metaResponse] = await Promise.all([
+        fetch('latest_results.csv', { cache: "no-store" }),
+        fetch('metadata.json', { cache: "no-store" })
+      ]);
+      if (!csvResponse.ok) throw new Error('Could not find latest_results.csv. Run a test first!');
+      const csvText = await csvResponse.text();
+      const metadata = metaResponse.ok ? await metaResponse.json() : {};
+      
+      const db = parseCSV(csvText);
+      buildMeta(metadata);
+      const kpis = buildKPIs(db);
+      buildCharts(db, kpis);
+      buildAggregateTable(db);
+      $('#subtitle').textContent = 'Summary, KPIs, Charts & Aggregate Report';
+
     } catch (error) {
       console.error(error);
       $('#subtitle').textContent = error.message;
     }
   }
 
-  // Automatically load the data when the page is opened.
   document.addEventListener('DOMContentLoaded', autoLoad);
-
 })();
 </script>
 </body>
 </html>
-```

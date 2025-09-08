@@ -2,12 +2,14 @@ import http from 'k6/http';
 import { sleep, check } from 'k6';
 import { htmlReport } from "https://raw.githubusercontent.com/benc-uk/k6-reporter/main/dist/bundle.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
+import { jUnit } from 'https://jslib.k6.io/k6-summary/0.0.2/index.js';
 
 // Get all generic variables from the environment
 const testType = __ENV.TEST_TYPE;
 const baseUrl = __ENV.BASE_URL;
 const endpoint = __ENV.ENDPOINT;
 const requestMethod = __ENV.REQUEST_METHOD.toUpperCase();
+const requestName = __ENV.REQUEST_NAME;
 const authToken = __ENV.AUTH_TOKEN;
 const requestPayload = __ENV.REQUEST_PAYLOAD;
 const contentType = __ENV.CONTENT_TYPE;
@@ -33,48 +35,25 @@ const profiles = {
 export const options = profiles[testType];
 
 export default function () {
-  let res;
   const tags = { name: targetUrl, test_type: testType };
-  
-  let payloadObject = {};
-  if (requestPayload && requestPayload !== '{}') {
-    payloadObject = JSON.parse(requestPayload);
-  }
+  const payloadObject = JSON.parse(requestPayload || '{}');
 
   let body = null;
   let headers = { ...requestHeaders };
+  if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  
   if (contentType === 'application/json') {
     body = JSON.stringify(payloadObject);
     headers['Content-Type'] = 'application/json';
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
-  } else if (contentType.includes('form')) {  // Handles multipart or urlencoded
-    if (authToken) {
-      payloadObject.token = authToken;
-    }
-    body = payloadObject;  // k6 handles form encoding
-    if (contentType === 'application/x-www-form-urlencoded') {
-      headers['Content-Type'] = 'application/x-www-form-urlencoded';
-    }  // multipart is default, no Content-Type needed
-  } else {
-    // Other types: assume raw body, set Content-Type
-    body = JSON.stringify(payloadObject);  // Or handle as string if needed
-    headers['Content-Type'] = contentType;
+  } else { // Handles multipart/form-data and urlencoded
+    body = payloadObject;
   }
 
   const params = { headers, tags };
-
-  // Use generic http.request for any method
-  res = http.request(requestMethod, targetUrl, body, params);
+  const res = http.request(requestMethod, targetUrl, body, params);
   
-  // DEBUGGING: Log the response status and body on the first iteration
-  if (__ITER === 0) {
-    console.log(`-- Response Debug Info --`);
-    console.log(`Response status: ${res.status}`);
-    console.log(`Response body: ${res.body}`);
-  }
-
   check(res, {
     [`status is ${expectedStatus}`]: (r) => r.status === expectedStatus,
   });
@@ -83,10 +62,22 @@ export default function () {
 }
 
 export function handleSummary(data) {
-  const testName = `${testType}_${requestMethod}`.toLowerCase();
+  const sanitizedName = requestName.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
+  const reportFilename = `${sanitizedName}-${requestMethod.toLowerCase()}-${testType}`;
+
+  const metadata = {
+    baseUrl: baseUrl,
+    requestName: requestName,
+    requestMethod: requestMethod,
+    endpoint: endpoint,
+    testType: testType,
+    timestamp: new Date().toISOString(),
+  };
+
   return {
     '/results/latest_results.csv': jsonToCsv(data),
-    [`/results/${testName}-report-${Date.now()}.html`]: htmlReport(data),
+    '/results/metadata.json': JSON.stringify(metadata, null, 2),
+    [`/results/${reportFilename}.html`]: htmlReport(data, { title: `${requestName} - ${testType.charAt(0).toUpperCase() + testType.slice(1)} Test` }),
     'stdout': textSummary(data, { indent: ' ', enableColors: true }),
   };
 }
