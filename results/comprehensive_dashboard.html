@@ -1,47 +1,4 @@
-import os
-import subprocess
-import sys
-import json
-import re
-import asyncio
-import shutil
-import json
-try:
-    from playwright.async_api import async_playwright
-    PLAYWRIGHT_AVAILABLE = True
-except ImportError:
-    PLAYWRIGHT_AVAILABLE = False
 
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-async def generate_pdf_from_dashboard(dashboard_url, pdf_path):
-    if not PLAYWRIGHT_AVAILABLE:
-        print("\n--- ⚠️ PDF Generation Skipped ---")
-        print("--- Please run 'pip install playwright' and 'playwright install' to enable this feature. ---")
-        return
-
-    try:
-        print(f"\n--- Generating PDF from dashboard at {dashboard_url} ---")
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            page = await browser.new_page()
-            await page.goto(dashboard_url, wait_until="networkidle")
-            await page.wait_for_timeout(5000)
-            await page.pdf(path=pdf_path, format="A4", print_background=True, margin={"top": "20mm", "bottom": "20mm"})
-            await browser.close()
-        os.chmod(pdf_path, 0o644)
-        print(f"--- ✅ PDF report saved to {pdf_path} ---")
-    except Exception as e:
-        print(f"\n--- ❌ An error occurred during PDF generation: {e} ---")
-        print("--- Ensure the web-server container is running. ---")
-
-import json
-
-def generate_comprehensive_dashboard(report_list, output_path):
-    report_json = json.dumps(report_list)
-
-    template = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -160,7 +117,7 @@ def generate_comprehensive_dashboard(report_list, output_path):
   </div>
 
   <script>
-    const reportList = """ + report_json + """;
+    const reportList = [{"csv": "pikachu-get-smoke-results.csv", "meta": "pikachu-get-smoke-metadata.json"}, {"csv": "blastoise-get-smoke-results.csv", "meta": "blastoise-get-smoke-metadata.json"}, {"csv": "snorlax-get-smoke-results.csv", "meta": "snorlax-get-smoke-metadata.json"}];
 
     let latencyChart;
     let reliabilityChart;
@@ -183,7 +140,7 @@ def generate_comprehensive_dashboard(report_list, output_path):
     }
 
     function parseCsv(text) {
-      const lines = text.split('\\n').slice(1).filter(line => line.trim());
+      const lines = text.split('\n').slice(1).filter(line => line.trim());
       const result = {};
       lines.forEach(line => {
         const [metric, type, valueStr] = line.split(',', 3);
@@ -289,125 +246,4 @@ def generate_comprehensive_dashboard(report_list, output_path):
   </script>
 </body>
 </html>
-    """
-
-    with open(output_path, 'w') as f:
-        f.write(template)
-    os.chmod(output_path, 0o644)
-
-def main():
-    clear_screen()
-
-    try:
-        with open('config.json', 'r') as f:
-            config = json.load(f)
-        requests = config.get('requests', [])
-        base_url = config.get('baseUrl')
-        peak_users = config.get('peakUsers', 10)
-        if not requests or not base_url:
-            print("Error: 'config.json' must contain 'baseUrl' and a 'requests' list. Exiting.")
-            sys.exit(1)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f"Error reading 'config.json': {e}. Exiting.")
-        sys.exit(1)
-
-    print(f"✅ Base URL loaded from config: {base_url}")
-    print(f"✅ Peak Users: {peak_users}")
-    print(f"✅ Total Requests to Test: {len(requests)}\n")
-
-    is_single_request = len(requests) == 1
-
-    print("\n--- Starting web server... ---")
-    try:
-        subprocess.run(["docker", "compose", "up", "-d", "--build", "web-server"], check=True)
-        print(f"Web server is running on http://localhost:8069/")
-    except subprocess.CalledProcessError as e:
-        print(f"Error starting web server: {e}. Exiting.")
-        sys.exit(1)
-
-    report_list = []
-
-    for req_idx, chosen_request in enumerate(requests):
-        test_types = chosen_request.get('testTypes', ['smoke'])
-        auth_token = chosen_request.get('authToken', '')
-
-        for test_type in test_types:
-            print("\n=========================================================")
-            print(f"  🚀 Starting: {test_type.title()} Test on '{chosen_request['name']}' (Request {req_idx+1}/{len(requests)})")
-            print(f"  Scaling for {peak_users} peak VUs")
-            print("=========================================================\n")
-
-            env_vars = {
-                "BASE_URL": base_url,
-                "ENDPOINT": chosen_request['endpoint'],
-                "REQUEST_METHOD": chosen_request['method'],
-                "REQUEST_NAME": chosen_request['name'],
-                "AUTH_TOKEN": auth_token,
-                "TEST_TYPE": test_type,
-                "PEAK_VUS": str(peak_users),
-                "REQUEST_PAYLOAD": json.dumps(chosen_request.get('payload', {})),
-                "CONTENT_TYPE": chosen_request.get('contentType', 'application/json'),
-                "REQUEST_HEADERS": json.dumps(chosen_request.get('headers', {})),
-                "QUERY_PARAMS": json.dumps(chosen_request.get('queryParams', {})),
-                "EXPECTED_STATUS": str(chosen_request.get('expectedStatus', 200))
-            }
-
-            command = ["docker", "compose", "run", "--rm", "--user", f"{os.getuid()}:{os.getgid()}"]
-            for key, value in env_vars.items():
-                command.extend(["-e", f"{key}={value}"])
-            command.append("k6")
-
-            try:
-                subprocess.run(command, check=True)
-
-                results_dir = './results'
-                if os.path.isdir(results_dir):
-                    for filename in os.listdir(results_dir):
-                        file_path = os.path.join(results_dir, filename)
-                        if os.path.isfile(file_path):
-                            os.chmod(file_path, 0o644)
-                
-                print(f"\n--- ✅ {test_type.title()} Test Finished ---")
-                
-                sanitized_name = re.sub(r'[^a-z0-9_.-]', '_', chosen_request['name'].lower())
-                report_base_name = f"{sanitized_name}-{chosen_request['method'].lower()}-{test_type}"
-                csv_path = f"{report_base_name}-results.csv"
-                meta_path = f"{report_base_name}-metadata.json"
-                
-                report_list.append({
-                    "csv": csv_path,
-                    "meta": meta_path
-                })
-
-                if is_single_request:
-                    shutil.copy(os.path.join(results_dir, csv_path), os.path.join(results_dir, 'latest_results.csv'))
-                    shutil.copy(os.path.join(results_dir, meta_path), os.path.join(results_dir, 'metadata.json'))
-                    
-                    pdf_path = os.path.join(results_dir, f"{report_base_name}.pdf")
-                    dashboard_url = "http://localhost:8069/dashboardgenerator.html"
-                    asyncio.run(generate_pdf_from_dashboard(dashboard_url, pdf_path))
-                    print("--- Dashboard data updated for single request. Refresh your browser at http://localhost:8069/dashboardgenerator.html ---")
-
-            except subprocess.CalledProcessError as e:
-                print(f"\n--- ❌ Error during {test_type.title()} Test on '{chosen_request['name']}': {e} ---")
-                print("--- Skipping this test and continuing... ---")
-                continue
-
-    if not is_single_request and report_list:
-        comp_html_path = os.path.join('./results', 'comprehensive_dashboard.html')
-        generate_comprehensive_dashboard(report_list, comp_html_path)
-        print("\n--- ✅ Comprehensive dashboard generated at results/comprehensive_dashboard.html ---")
-        
-        pdf_path = os.path.join('./results', 'comprehensive_report.pdf')
-        dashboard_url = "http://localhost:8069/comprehensive_dashboard.html"
-        asyncio.run(generate_pdf_from_dashboard(dashboard_url, pdf_path))
-        print("--- View comprehensive dashboard at http://localhost:8069/comprehensive_dashboard.html ---")
-
-    print("\nAll tests have finished. Stopping web server...")
-    try:
-        subprocess.run(["docker", "compose", "down"], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error stopping web server: {e}. Server may still be running.")
-
-if __name__ == "__main__":
-    main()
+    

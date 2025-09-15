@@ -1,11 +1,30 @@
 {
   "baseUrl": "https://pokeapi.co",
+  "peakUsers": 10,
   "requests": [
     {
-      "name": "Public GET Test (PokeAPI)",
+      "name": "Pikachu",
       "method": "GET",
-      "endpoint": "/api/v2/pokemon/ditto",
-      "expectedStatus": 200
+      "endpoint": "/api/v2/pokemon/pikachu",
+      "expectedStatus": 200,
+      "testTypes": ["smoke"],
+      "authToken": ""
+    },
+    {
+      "name": "Blastoise",
+      "method": "GET",
+      "endpoint": "/api/v2/pokemon/blastoise",
+      "expectedStatus": 200,
+      "testTypes": ["smoke"],
+      "authToken": ""
+    },
+    {
+      "name": "Snorlax",
+      "method": "GET",
+      "endpoint": "/api/v2/pokemon/snorlax",
+      "expectedStatus": 200,
+      "testTypes": ["smoke"],
+      "authToken": ""
     }
   ]
 }

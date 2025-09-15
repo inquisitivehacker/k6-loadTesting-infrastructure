@@ -1,8 +1,8 @@
 {
   "baseUrl": "https://pokeapi.co",
-  "requestName": "Public GET Test (PokeAPI)",
+  "requestName": "Pikachu",
   "requestMethod": "GET",
-  "endpoint": "/api/v2/pokemon/ditto",
+  "endpoint": "/api/v2/pokemon/pikachu",
   "testType": "smoke",
-  "timestamp": "2025-09-08T08:25:10.897Z"
+  "timestamp": "2025-09-15T11:31:30.485Z"
 }

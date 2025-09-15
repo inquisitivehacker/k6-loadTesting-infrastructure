@@ -29,7 +29,7 @@ const profiles = {
   load: { executor: 'ramping-vus', stages: [ { duration: '2m', target: peakVUs }, { duration: '5m', target: peakVUs }, { duration: '1m', target: 0 } ] },
   stress: { executor: 'ramping-vus', stages: [ { duration: '2m', target: peakVUs }, { duration: '3m', target: peakVUs }, { duration: '2m', target: Math.round(peakVUs * 1.5) }, { duration: '3m', target: Math.round(peakVUs * 1.5) }, { duration: '2m', target: Math.round(peakVUs * 2) }, { duration: '3m', target: Math.round(peakVUs * 2) }, { duration: '5m', target: 0 } ] },
   spike: { executor: 'ramping-vus', stages: [ { duration: '1m', target: Math.round(peakVUs * 0.25) }, { duration: '2m', target: Math.round(peakVUs * 0.25) }, { duration: '10s', target: Math.round(peakVUs * 2.5) }, { duration: '2m', target: Math.round(peakVUs * 2.5) }, { duration: '10s', target: Math.round(peakVUs * 0.25) }, { duration: '2m', target: Math.round(peakVUs * 0.25) }, { duration: '10s', target: 0 } ] },
-  soak: { executor: 'constant-vus', vus: Math.round(peakVUs * 0.8), duration: '1h' },
+  soak: { executor: 'constant-vus', vus: Math.round(peakVUs * 0.8), duration: '3m' },
 };
 
 export const options = profiles[testType];
@@ -75,8 +75,8 @@ export function handleSummary(data) {
   };
 
   return {
-    '/results/latest_results.csv': jsonToCsv(data),
-    '/results/metadata.json': JSON.stringify(metadata, null, 2),
+    [`/results/${reportFilename}-results.csv`]: jsonToCsv(data),
+    [`/results/${reportFilename}-metadata.json`]: JSON.stringify(metadata, null, 2),
     [`/results/${reportFilename}.html`]: htmlReport(data, { title: `${requestName} - ${testType.charAt(0).toUpperCase() + testType.slice(1)} Test` }),
     'stdout': textSummary(data, { indent: ' ', enableColors: true }),
   };
