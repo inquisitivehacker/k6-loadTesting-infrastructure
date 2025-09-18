@@ -1,8 +1,8 @@
 {
-  "baseUrl": "https://pokeapi.co",
-  "requestName": "Pikachu",
-  "requestMethod": "GET",
-  "endpoint": "/api/v2/pokemon/pikachu",
-  "testType": "smoke",
-  "timestamp": "2025-09-15T11:31:30.485Z"
+  "baseUrl": "https://jsonplaceholder.typicode.com",
+  "requestName": "Create User",
+  "requestMethod": "POST",
+  "endpoint": "/users",
+  "testType": "soak",
+  "timestamp": "2025-09-18T07:39:08.466Z"
 }

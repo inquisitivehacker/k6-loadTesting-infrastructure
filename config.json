@@ -1,29 +1,34 @@
 {
-  "baseUrl": "https://pokeapi.co",
+  "baseUrl": "https://jsonplaceholder.typicode.com",
   "peakUsers": 10,
   "requests": [
     {
-      "name": "Pikachu",
-      "method": "GET",
-      "endpoint": "/api/v2/pokemon/pikachu",
-      "expectedStatus": 200,
+      "name": "Create Post 1",
+      "method": "POST",
+      "endpoint": "/posts",
+      "expectedStatus": 201,
       "testTypes": ["smoke"],
+      "payload": {
+        "title": "Test Title 1",
+        "body": "Test Body Content 1",
+        "userId": 1
+      },
+      "contentType": "application/json",
       "authToken": ""
     },
     {
-      "name": "Blastoise",
-      "method": "GET",
-      "endpoint": "/api/v2/pokemon/blastoise",
-      "expectedStatus": 200,
+      "name": "Create Comment 1",
+      "method": "POST",
+      "endpoint": "/comments",
+      "expectedStatus": 201,
       "testTypes": ["smoke"],
-      "authToken": ""
-    },
-    {
-      "name": "Snorlax",
-      "method": "GET",
-      "endpoint": "/api/v2/pokemon/snorlax",
-      "expectedStatus": 200,
-      "testTypes": ["smoke"],
+      "payload": {
+        "postId": 1,
+        "name": "Test User 1",
+        "email": "test1@example.com",
+        "body": "Test Comment Body 1"
+      },
+      "contentType": "application/json",
       "authToken": ""
     }
   ]

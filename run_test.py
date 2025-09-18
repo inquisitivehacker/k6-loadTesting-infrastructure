@@ -24,20 +24,92 @@ async def generate_pdf_from_dashboard(dashboard_url, pdf_path):
     try:
         print(f"\n--- Generating PDF from dashboard at {dashboard_url} ---")
         async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            page = await browser.new_page()
-            await page.goto(dashboard_url, wait_until="networkidle")
-            await page.wait_for_timeout(5000)
-            await page.pdf(path=pdf_path, format="A4", print_background=True, margin={"top": "20mm", "bottom": "20mm"})
+            browser = await p.chromium.launch(headless=True, args=['--no-sandbox', '--disable-dev-shm-usage'])
+            context = await browser.new_context(viewport={"width": 1440, "height": 1056})
+            page = await context.new_page()
+
+            # Emulate print media and inject CSS for layout fixes
+            await page.emulate_media(media="print")
+            await page.add_style_tag(content="""
+                @media print {
+    body { 
+        margin: 0; 
+        padding: 0; 
+        font-size: 10pt; 
+        background: #fff !important; 
+        color: #000 !important; /* Ensure text contrast */
+    }
+    .grid { 
+        display: grid !important; /* Preserve grid for multi-column */
+        grid-template-columns: repeat(auto-fit, minmax(200mm, 1fr)) !important; /* Fit to A4 landscape width (~270mm usable) */
+        gap: 5mm; /* Reduce gaps */
+    }
+    .grid.kpi { 
+        grid-template-columns: repeat(4, 1fr) !important; /* Keep if KPIs exist */
+    }
+    .grid.two { 
+        grid-template-columns: repeat(2, 1fr) !important; /* Allow side-by-side charts */
+        page-break-inside: avoid; /* Prevent splitting the two-chart row */
+    }
+    .grid.three { 
+        grid-template-columns: repeat(3, 1fr) !important; /* Keep API details in row if fits */
+        page-break-inside: avoid;
+    }
+    section, .card { 
+        page-break-inside: avoid; /* Keep individual cards intact */
+        page-break-after: auto; /* Allow breaks after, but not forced */
+        margin: 3mm 0; /* Reduce margins */
+        padding: 3mm; 
+        box-shadow: none; 
+        border: none;
+    }
+    canvas { 
+        width: 100% !important; 
+        height: auto !important; 
+        max-height: 100mm; /* Cap chart height to fit more per page */
+    }
+    .chip, .subtitle, .filter, input { 
+        display: none !important; /* Hide filter input fully */
+    }
+    @page { 
+        size: A4 landscape; /* Explicitly set for consistency */
+        margin: 8mm; /* Reduce from 10mm to minimize borders */
+    }
+    /* Avoid orphan/widow lines */
+    h1, h2, h3 { 
+        page-break-after: avoid; 
+    }
+    /* Force break before API details if needed */
+    .api-details-section { /* Add this class to the APIs detail container in HTML if possible */
+        page-break-before: always;
+    }
+}
+            """)
+
+            await page.goto(dashboard_url, wait_until="networkidle", timeout=60000)
+            await page.wait_for_timeout(10000)  # Longer for JS/charts to settle
+            await page.pdf(
+                path=pdf_path,
+                format="A4",
+                print_background=True,
+                prefer_css_page_size=True,
+                scale=0.85,
+                margin={"top": "10mm", "bottom": "10mm", "left": "8mm", "right": "8mm"},
+                landscape=True
+            )
             await browser.close()
         os.chmod(pdf_path, 0o644)
         print(f"--- ✅ PDF report saved to {pdf_path} ---")
     except Exception as e:
         print(f"\n--- ❌ An error occurred during PDF generation: {e} ---")
+        if 'page' in locals() and page:
+            try:
+                await page.screenshot(path='debug.png', timeout=10000)
+                print("--- Debug screenshot saved to debug.png ---")
+            except Exception as se:
+                print(f"--- ❌ Screenshot failed: {se} ---")
         print("--- Ensure the web-server container is running. ---")
-
-import json
-
+        
 def generate_comprehensive_dashboard(report_list, output_path):
     report_json = json.dumps(report_list)
 
@@ -53,19 +125,19 @@ def generate_comprehensive_dashboard(report_list, output_path):
 
   <style>
     :root {
-      --bg: #f6f7fb;
+      --bg: #ffffff;
       --panel: #ffffff;
       --card: #ffffff;
       --muted: #475569;
       --text: #0f172a;
       --accent: #2563eb;
-      --success: #16a34a;
+      --success: #4088d9;
       --warn: #d97706;
       --error: #dc2626;
       --link: #2563eb;
       --chip: #eef2f7;
-      --border: #e5e7eb;
-      --shadow: 0 6px 22px rgba(0,0,0,.08);
+      --border: #e6e6e6;
+      --shadow: none;
     }
     body {
       margin: 0;
@@ -73,14 +145,14 @@ def generate_comprehensive_dashboard(report_list, output_path):
       color: var(--text);
       font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial;
     }
-    .wrap { max-width:1280px; margin:0 auto; padding:24px; }
+    .wrap { max-width:1180px; margin:24px auto 48px; padding:0 16px; }
     header {
       position: sticky; top: 0; z-index: 10;
       backdrop-filter: saturate(180%) blur(10px);
       background: var(--panel);
       border-bottom: 1px solid var(--border);
     }
-    .bar { max-width:1280px; margin:0 auto; display:flex; gap:16px; align-items:center; padding:14px 24px; }
+    .bar { max-width:1180px; margin:0 auto; display:flex; gap:16px; align-items:center; padding:14px 24px; }
     .title { font-weight:700; letter-spacing:.2px; }
     .subtitle { color: var(--muted); font-size:13px; }
     .chip { background: var(--chip); border: 1px solid var(--border); color: var(--text); padding:6px 10px; border-radius:999px; font-size:12px; }
@@ -93,14 +165,14 @@ def generate_comprehensive_dashboard(report_list, output_path):
       .grid.two, .grid.three { grid-template-columns: repeat(1, minmax(0,1fr)); }
     }
     section {
-      background: var(--panel); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:18px;
+      background: var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px 14px 10px;
     }
     .kpi {
-      background: var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow);
-      padding:16px; display:flex; flex-direction:column; gap:8px; min-height:120px;
+      background: var(--card); border:1px solid var(--border); border-radius:12px;
+      padding:14px 14px 10px; display:flex; align-items:baseline; justify-content:space-between; gap:8px;
     }
     .kpi .label { color: var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
-    .kpi .value { font-size:24px; font-weight:700; }
+    .kpi .value { font-size:22px; font-weight:700; }
     .chip { display:inline-block; }
     .toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom: 20px; }
     .toolbar input {
@@ -110,12 +182,29 @@ def generate_comprehensive_dashboard(report_list, output_path):
     h1,h2,h3{ margin:0; }
     h2{ font-size:18px; margin-bottom:12px; }
     .card {
-      background: var(--card);
+      background: #fff;
       border: 1px solid var(--border);
-      border-radius:14px;
-      padding:16px;
+      border-radius:12px;
+      padding:14px 14px 10px;
       box-shadow: var(--shadow);
     }
+    @media print {
+    body { margin: 0; padding: 0; font-size: 10pt; }  /* Tighten overall */
+    .grid, .grid.kpi, .grid.two, .grid.three { 
+        display: block !important;  /* Stack grids vertically */
+        grid-template-columns: none !important;
+    }
+    section, .card { 
+        break-inside: avoid;  /* Prevent splits in cards/sections */
+        margin: 5mm 0; padding: 5mm;  /* Reduce white space */
+        box-shadow: none; border: none;  /* Remove visuals for print */
+    }
+    .chip, .subtitle { display: none; }  /* Hide non-essential like filters/tips */
+    .bar, header { position: relative !important; }  /* Unstick headers */
+    canvas { width: 100% !important; height: auto !important; }  /* Fit charts */
+    @page { margin: 10mm; }  /* Global page margins */
+    .apis-detail { page-break-before: always; }  /* Force new page for details if needed */
+}
     .api-card { display: flex; flex-direction: column; gap:12px; }
     .api-head { display: flex; justify-content: space-between; align-items: center; gap:12px; }
   </style>
@@ -133,7 +222,7 @@ def generate_comprehensive_dashboard(report_list, output_path):
       <p class="subtitle">Tip: Use the nginx server on port 8069 to browse generated results and this dashboard as before.</p>
     </section>
     <div class="grid two">
-      <section>
+      <div class="card">
         <h2>Latency comparison</h2>
         <canvas id="latencyChart"></canvas>
         <div class="chip">
@@ -141,15 +230,15 @@ def generate_comprehensive_dashboard(report_list, output_path):
           P90 <span style="color:var(--success)">●</span>
           P95 <span style="color:var(--error)">●</span>
         </div>
-      </section>
-      <section>
+      </div>
+      <div class="card">
         <h2>Reliability and throughput</h2>
         <canvas id="reliabilityChart"></canvas>
         <div class="chip">
           Error rate <span style="color:var(--error)">●</span>
           RPS <span style="color:var(--success)">●</span>
         </div>
-      </section>
+      </div>
     </div>
     <br>
     <section>
@@ -206,7 +295,7 @@ def generate_comprehensive_dashboard(report_list, output_path):
           labels,
           datasets: [
             { label: 'Avg', data: filteredData.map(d => d.metrics.http_req_duration.avg), backgroundColor: '#2563eb' },
-            { label: 'P90', data: filteredData.map(d => d.metrics.http_req_duration['p(90)']), backgroundColor: '#10b981' },
+            { label: 'P90', data: filteredData.map(d => d.metrics.http_req_duration['p(90)']), backgroundColor: '#4088d9' },
             { label: 'P95', data: filteredData.map(d => d.metrics.http_req_duration['p(95)']), backgroundColor: '#ef4444' }
           ]
         },
@@ -294,7 +383,6 @@ def generate_comprehensive_dashboard(report_list, output_path):
     with open(output_path, 'w') as f:
         f.write(template)
     os.chmod(output_path, 0o644)
-
 def main():
     clear_screen()
 
