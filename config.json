@@ -3,7 +3,7 @@
   "peakUsers": 10,
   "requests": [
     {
-      "name": "Create Post 1",
+      "name": "Post1",
       "method": "POST",
       "endpoint": "/posts",
       "expectedStatus": 201,
@@ -17,7 +17,7 @@
       "authToken": ""
     },
     {
-      "name": "Create Comment 1",
+      "name": "Comment1",
       "method": "POST",
       "endpoint": "/comments",
       "expectedStatus": 201,
@@ -27,6 +27,149 @@
         "name": "Test User 1",
         "email": "test1@example.com",
         "body": "Test Comment Body 1"
+      },
+      "contentType": "application/json",
+      "authToken": ""
+    },
+    {
+      "name": "Post2",
+      "method": "POST",
+      "endpoint": "/posts",
+      "expectedStatus": 201,
+      "testTypes": ["smoke"],
+      "payload": {
+        "title": "Test Title 2",
+        "body": "Test Body Content 2",
+        "userId": 2
+      },
+      "contentType": "application/json",
+      "authToken": ""
+    },
+    {
+      "name": "Post3",
+      "method": "POST",
+      "endpoint": "/posts",
+      "expectedStatus": 201,
+      "testTypes": ["smoke"],
+      "payload": {
+        "title": "Test Title 3",
+        "body": "Test Body Content 3",
+        "userId": 1
+      },
+      "contentType": "application/json",
+      "authToken": ""
+    },
+    {
+      "name": "Comment1",
+      "method": "POST",
+      "endpoint": "/comments",
+      "expectedStatus": 201,
+      "testTypes": ["smoke"],
+      "payload": {
+        "postId": 1,
+        "name": "Test User 4",
+        "email": "test4@example.com",
+        "body": "Test Comment Body 4"
+      },
+      "contentType": "application/json",
+      "authToken": ""
+    },
+    {
+      "name": "Post6",
+      "method": "POST",
+      "endpoint": "/posts",
+      "expectedStatus": 201,
+      "testTypes": ["smoke"],
+      "payload": {
+        "title": "Test Title 6",
+        "body": "Test Body Content 6",
+        "userId": 2
+      },
+      "contentType": "application/json",
+      "authToken": ""
+    },
+    {
+      "name": "Post8",
+      "method": "POST",
+      "endpoint": "/posts",
+      "expectedStatus": 201,
+      "testTypes": ["smoke"],
+      "payload": {
+        "title": "Test Title 8",
+        "body": "Test Body Content 8",
+        "userId": 1
+      },
+      "contentType": "application/json",
+      "authToken": ""
+    },
+    {
+      "name": "Comment1",
+      "method": "POST",
+      "endpoint": "/comments",
+      "expectedStatus": 201,
+      "testTypes": ["smoke"],
+      "payload": {
+        "postId": 1,
+        "name": "Test User 1",
+        "email": "test1@example.com",
+        "body": "Test Comment Body 1"
+      },
+      "contentType": "application/json",
+      "authToken": ""
+    },
+    {
+      "name": "Post2",
+      "method": "POST",
+      "endpoint": "/posts",
+      "expectedStatus": 201,
+      "testTypes": ["smoke"],
+      "payload": {
+        "title": "Test Title 2",
+        "body": "Test Body Content 2",
+        "userId": 2
+      },
+      "contentType": "application/json",
+      "authToken": ""
+    },
+    {
+      "name": "Post1",
+      "method": "POST",
+      "endpoint": "/posts",
+      "expectedStatus": 201,
+      "testTypes": ["smoke"],
+      "payload": {
+        "title": "Test Title 3",
+        "body": "Test Body Content 3",
+        "userId": 1
+      },
+      "contentType": "application/json",
+      "authToken": ""
+    },
+    {
+      "name": "Comment1",
+      "method": "POST",
+      "endpoint": "/comments",
+      "expectedStatus": 201,
+      "testTypes": ["smoke"],
+      "payload": {
+        "postId": 1,
+        "name": "Test User 4",
+        "email": "test4@example.com",
+        "body": "Test Comment Body 4"
+      },
+      "contentType": "application/json",
+      "authToken": ""
+    },
+    {
+      "name": "Post9",
+      "method": "POST",
+      "endpoint": "/posts",
+      "expectedStatus": 201,
+      "testTypes": ["smoke"],
+      "payload": {
+        "title": "Test Title 9",
+        "body": "Test Body Content 9",
+        "userId": 2
       },
       "contentType": "application/json",
       "authToken": ""

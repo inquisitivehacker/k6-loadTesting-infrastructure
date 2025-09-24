@@ -35,50 +35,107 @@ async def generate_pdf_from_dashboard(dashboard_url, pdf_path):
     body { 
         margin: 0; 
         padding: 0; 
-        font-size: 10pt; 
+        font-size: 9pt; 
         background: #fff !important; 
-        color: #000 !important; /* Ensure text contrast */
+        color: #000 !important;
     }
+
+    /* Generic grid */
     .grid { 
-        display: grid !important; /* Preserve grid for multi-column */
-        grid-template-columns: repeat(auto-fit, minmax(200mm, 1fr)) !important; /* Fit to A4 landscape width (~270mm usable) */
-        gap: 5mm; /* Reduce gaps */
+        display: grid !important;
+        gap: 5mm;
     }
+
+    /* KPIs: 4 per row */
     .grid.kpi { 
-        grid-template-columns: repeat(4, 1fr) !important; /* Keep if KPIs exist */
+        grid-template-columns: repeat(4, 1fr) !important; 
     }
+
+    /* Charts: 2 side by side */
     .grid.two { 
-        grid-template-columns: repeat(2, 1fr) !important; /* Allow side-by-side charts */
-        page-break-inside: avoid; /* Prevent splitting the two-chart row */
-    }
-    .grid.three { 
-        grid-template-columns: repeat(3, 1fr) !important; /* Keep API details in row if fits */
+        grid-template-columns: repeat(2, 1fr) !important;
         page-break-inside: avoid;
     }
+
+    /* APIs: 3 per row (clean grid like screenshot) */
+    .grid.three { 
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6mm !important;
+        page-break-inside: avoid;
+    }
+
+    /* Section & card adjustments */
     section, .card { 
-        page-break-inside: avoid; /* Keep individual cards intact */
-        page-break-after: auto; /* Allow breaks after, but not forced */
-        margin: 3mm 0; /* Reduce margins */
+        page-break-inside: avoid;
+        page-break-after: auto;
+        margin: 2mm 0;
         padding: 3mm; 
         box-shadow: none; 
-        border: none;
+        border: 1px solid #ddd;
+        border-radius: 6px;
     }
+
+    /* Chart size */
     canvas { 
         width: 100% !important; 
         height: auto !important; 
-        max-height: 100mm; /* Cap chart height to fit more per page */
+        max-height: 95mm;
     }
+
+    /* API card compact styling */
+    .api-card {
+        padding: 6px 8px !important;
+        font-size: 9pt !important;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        height: auto;
+        break-inside: avoid;
+    }
+
+    .api-card h3 {
+        font-size: 11pt !important;
+        margin: 0 0 4px 0 !important;
+    }
+
+    .api-card .kpi {
+        display: flex;
+        justify-content: space-between;
+        margin: 2px 0;
+        padding: 0;
+    }
+
+    .api-card .kpi .label {
+        font-size: 8pt !important;
+        color: #666;
+    }
+
+    .api-card .kpi .value {
+        font-size: 10pt !important;
+        font-weight: 600;
+    }
+
+    /* Alternate shading for readability */
+    .api-card:nth-child(even) {
+        background: #f9f9f9 !important;
+    }
+
+    /* Hide non-essentials */
     .chip, .subtitle, .filter, input { 
-        display: none !important; /* Hide filter input fully */
+        display: none !important;
     }
+
+    /* Page size/orientation */
     @page { 
-        size: A4 landscape; /* Explicitly set for consistency */
-        margin: 8mm; /* Reduce from 10mm to minimize borders */
+        size: A4 landscape;
+        margin: 8mm;
     }
-    /* Avoid orphan/widow lines */
+
+    /* Avoid orphan/widow headers */
     h1, h2, h3 { 
         page-break-after: avoid; 
     }
+}
+
     /* Force break before API details if needed */
     .api-details-section { /* Add this class to the APIs detail container in HTML if possible */
         page-break-before: always;
@@ -119,8 +176,8 @@ def generate_comprehensive_dashboard(report_list, output_path):
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Comprehensive API Performance Report</title>
-
+  <title>Comprehensive Performance Report</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
@@ -143,20 +200,20 @@ def generate_comprehensive_dashboard(report_list, output_path):
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial;
+      font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial; /* Slightly smaller font */
     }
-    .wrap { max-width:1180px; margin:24px auto 48px; padding:0 16px; }
+    .wrap { max-width:1180px; margin:12px auto 24px; padding:0 8px; } /* Reduced margins and padding */
     header {
       position: sticky; top: 0; z-index: 10;
       backdrop-filter: saturate(180%) blur(10px);
       background: var(--panel);
       border-bottom: 1px solid var(--border);
     }
-    .bar { max-width:1180px; margin:0 auto; display:flex; gap:16px; align-items:center; padding:14px 24px; }
-    .title { font-weight:700; letter-spacing:.2px; }
-    .subtitle { color: var(--muted); font-size:13px; }
-    .chip { background: var(--chip); border: 1px solid var(--border); color: var(--text); padding:6px 10px; border-radius:999px; font-size:12px; }
-    .grid { display:grid; gap:16px; }
+    .bar { max-width:1180px; margin:0 auto; display:flex; gap:8px; align-items:center; padding:8px 12px; } /* Reduced padding and gap */
+    .title { font-weight:700; letter-spacing:.1px; font-size: 18px; } /* Slightly smaller title */
+    .subtitle { color: var(--muted); font-size:11px; }
+    .chip { background: var(--chip); border: 1px solid var(--border); color: var(--text); padding:4px 8px; border-radius:999px; font-size:10px; } /* Reduced padding and font */
+    .grid { display:grid; gap:8px; } /* Reduced gap */
     .grid.kpi { grid-template-columns: repeat(4, minmax(0,1fr)); }
     .grid.two { grid-template-columns: repeat(2, minmax(0,1fr)); }
     .grid.three { grid-template-columns: repeat(3, minmax(0,1fr)); }
@@ -165,61 +222,114 @@ def generate_comprehensive_dashboard(report_list, output_path):
       .grid.two, .grid.three { grid-template-columns: repeat(1, minmax(0,1fr)); }
     }
     section {
-      background: var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px 14px 10px;
+      background: var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px 8px 6px; /* Reduced padding and radius */
     }
     .kpi {
-      background: var(--card); border:1px solid var(--border); border-radius:12px;
-      padding:14px 14px 10px; display:flex; align-items:baseline; justify-content:space-between; gap:8px;
+      background: var(--card); border:1px solid var(--border); border-radius:8px;
+      padding:8px 8px 6px; display:flex; align-items:baseline; justify-content:space-between; gap:4px; /* Reduced padding and gap */
     }
-    .kpi .label { color: var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
-    .kpi .value { font-size:22px; font-weight:700; }
+    .kpi .label { color: var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.05em; } /* Smaller font */
+    .kpi .value { font-size:18px; font-weight:700; } /* Slightly smaller value */
     .chip { display:inline-block; }
-    .toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom: 20px; }
+    .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom: 10px; } /* Reduced gap and margin */
     .toolbar input {
-      background: var(--card); border:1px solid var(--border); border-radius:10px;
-      padding:10px 12px; color: var(--text); outline:none; min-width:260px;
+      background: var(--card); border:1px solid var(--border); border-radius:8px;
+      padding:6px 8px; color: var(--text); outline:none; min-width:200px; /* Reduced padding and width */
     }
     h1,h2,h3{ margin:0; }
-    h2{ font-size:18px; margin-bottom:12px; }
+    h2{ font-size:16px; margin-bottom:6px; } /* Reduced font and margin */
     .card {
       background: #fff;
       border: 1px solid var(--border);
-      border-radius:12px;
-      padding:14px 14px 10px;
+      border-radius:8px;
+      padding:8px 8px 6px;
       box-shadow: var(--shadow);
     }
     @media print {
-    body { margin: 0; padding: 0; font-size: 10pt; }  /* Tighten overall */
-    .grid, .grid.kpi, .grid.two, .grid.three { 
-        display: block !important;  /* Stack grids vertically */
-        grid-template-columns: none !important;
-    }
-    section, .card { 
-        break-inside: avoid;  /* Prevent splits in cards/sections */
-        margin: 5mm 0; padding: 5mm;  /* Reduce white space */
-        box-shadow: none; border: none;  /* Remove visuals for print */
-    }
-    .chip, .subtitle { display: none; }  /* Hide non-essential like filters/tips */
-    .bar, header { position: relative !important; }  /* Unstick headers */
-    canvas { width: 100% !important; height: auto !important; }  /* Fit charts */
-    @page { margin: 10mm; }  /* Global page margins */
-    .apis-detail { page-break-before: always; }  /* Force new page for details if needed */
+  body { 
+    margin: 0; 
+    padding: 0; 
+    font-size: 9pt; 
+  }
+
+  /* KPIs: keep 4 per row */
+  .grid.kpi { 
+    grid-template-columns: repeat(4, 1fr) !important; 
+    gap: 4mm !important;
+  }
+
+  /* Graphs: don't force side by side, keep natural layout (stacked) */
+  .grid.two { 
+    display: block !important; 
+    gap: 6mm !important;
+  }
+
+  /* API cards: enforce 3 per row (grid view) */
+  .grid.three { 
+    display: grid !important; 
+    grid-template-columns: repeat(3, 1fr) !important; 
+    gap: 6mm !important;
+  }
+
+  /* Cards and sections */
+  section, .card { 
+    break-inside: avoid; 
+    margin: 2mm 0; 
+    padding: 3mm; 
+    box-shadow: none; 
+    border: 1px solid #ddd;
+    border-radius: 6px;
+  }
+
+  /* Charts */
+  canvas { 
+    width: 100% !important; 
+    height: auto !important; 
+    max-height: 80mm !important; 
+  }
+
+  /* Hide UI elements not needed in PDF */
+  .chip, .subtitle, .toolbar, input { 
+    display: none !important; 
+  }
+
+  /* Header */
+  .bar, header { 
+    position: relative !important; 
+    padding: 2mm !important; 
+    border-bottom: 1px solid #ddd;
+  }
+
+  @page { 
+    size: A4 landscape; 
+    margin: 8mm; 
+  }
 }
-    .api-card { display: flex; flex-direction: column; gap:12px; }
-    .api-head { display: flex; justify-content: space-between; align-items: center; gap:12px; }
+    section, .card { 
+        break-inside: avoid; 
+        margin: 2mm 0; padding: 2mm; /* Reduced margins and padding */
+        box-shadow: none; border: none;
+    }
+    .chip, .subtitle { display: none; }
+    .bar, header { position: relative !important; padding: 1mm !important; } /* Tighter header */
+    canvas { width: 100% !important; height: auto !important; max-height: 80mm !important; } /* Limit chart height */
+    @page { margin: 5mm; } /* Reduced page margins */
+    .toolbar { height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; } /* Collapse toolbar */
+    .api-card { display: flex; flex-direction: column; gap:6px; } /* Reduced gap */
+    .api-head { display: flex; justify-content: space-between; align-items: center; gap:6px; } /* Reduced gap */
   </style>
 </head>
 <body>
   <header>
     <div class="bar">
-      <h1 class="title">Comprehensive API Performance Report</h1>
-      <p class="subtitle">Aggregated k6 results by API and test profile</p>
+      <img src="./logo.png" alt="Company Logo" class="logo" onerror="this.style.display='none';" width="80px" height="80px" /> <!-- Reduced size -->
+      <h1 class="title">Comprehensive Performance Report</h1>
     </div>
   </header>
   <div class="wrap">
     <section class="toolbar">
       <input type="text" id="filter" placeholder="Filter by API name or endpoint...">
-      <p class="subtitle">Tip: Use the nginx server on port 8069 to browse generated results and this dashboard as before.</p>
+      <p class="subtitle">Use the search bar to browse API tests.</p>
     </section>
     <div class="grid two">
       <div class="card">
@@ -245,7 +355,7 @@ def generate_comprehensive_dashboard(report_list, output_path):
       <h2>APIs detail</h2>
       <div id="apiCards" class="grid three"></div>
     </section>
-    <p class="subtitle">Generated from k6 CSV/metadata artifacts and rendered client-side for static hosting and PDF export. No backend changes required.</p>
+    <p class="subtitle">Created by Third Eye Creative, All rights reserved.</p>
   </div>
 
   <script>

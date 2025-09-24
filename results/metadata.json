@@ -1,8 +1,8 @@
 {
   "baseUrl": "https://jsonplaceholder.typicode.com",
-  "requestName": "Create User",
+  "requestName": "Post1",
   "requestMethod": "POST",
-  "endpoint": "/users",
-  "testType": "soak",
-  "timestamp": "2025-09-18T07:39:08.466Z"
+  "endpoint": "/posts",
+  "testType": "smoke",
+  "timestamp": "2025-09-19T10:00:53.580Z"
 }
