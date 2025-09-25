@@ -5,7 +5,43 @@ import json
 import re
 import asyncio
 import shutil
-import json
+from jsonschema import validate, ValidationError
+schema = {
+    "type": "object",
+    "properties": {
+        "baseUrl": {"type": "string"},
+        "peakUsers": {"type": "integer", "minimum": 1},
+        "requests": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "method": {"type": "string", "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"]},  # Restrict to common HTTP methods
+                    "endpoint": {"type": "string"},
+                    "expectedStatus": {"type": "integer"},
+                    "testTypes": {
+                        "type": "array",
+                        "items": {"type": "string", "enum": ["smoke", "load", "stress", "spike", "soak"]}
+                    },
+                    "payload": {"type": "object"},
+                    "contentType": {"type": "string"},
+                    "authToken": {"type": "string"}
+                },
+                "required": ["name", "method", "endpoint"]  # These must be present in every request
+            }
+        }
+    },
+    "required": ["baseUrl", "peakUsers", "requests"]  # Top-level required fields
+}
+def validate_config(config_data):
+    try:
+        validate(instance=config_data, schema=schema)
+        print("--- ✅ Config validated successfully ---")
+    except ValidationError as e:
+        print(f"--- ❌ Config validation failed: {e.message} ---")
+        sys.exit(1)  # Exit the script to prevent bad runs
+        
 try:
     from playwright.async_api import async_playwright
     PLAYWRIGHT_AVAILABLE = True
@@ -209,8 +245,29 @@ def generate_comprehensive_dashboard(report_list, output_path):
       background: var(--panel);
       border-bottom: 1px solid var(--border);
     }
-    .bar { max-width:1180px; margin:0 auto; display:flex; gap:8px; align-items:center; padding:8px 12px; } /* Reduced padding and gap */
-    .title { font-weight:700; letter-spacing:.1px; font-size: 18px; } /* Slightly smaller title */
+    .bar { 
+      max-width:1180px; 
+      margin:0 auto; 
+      display:flex; 
+      gap:8px; 
+      align-items:center; 
+      padding:8px 12px; 
+      position: relative; /* Contain absolute logo */
+    }
+    .logo {
+      position: absolute;
+      top: 1px;   /* Align with .bar padding */
+      right: 10px;  /* Align with .bar padding */
+      height: 40px; /* Fixed height for consistency; width: auto scales proportionally */
+      width: auto;
+    }
+    .title { 
+      font-weight:700; 
+      letter-spacing:.1px; 
+      font-size: 18px; 
+      margin: 0;
+      margin-right: 200px; /* Prevent overlap with logo if wide */
+    }
     .subtitle { color: var(--muted); font-size:11px; }
     .chip { background: var(--chip); border: 1px solid var(--border); color: var(--text); padding:4px 8px; border-radius:999px; font-size:10px; } /* Reduced padding and font */
     .grid { display:grid; gap:8px; } /* Reduced gap */
@@ -493,12 +550,13 @@ def generate_comprehensive_dashboard(report_list, output_path):
     with open(output_path, 'w') as f:
         f.write(template)
     os.chmod(output_path, 0o644)
+    
 def main():
     clear_screen()
-
     try:
         with open('config.json', 'r') as f:
             config = json.load(f)
+        validate_config(config)  # Fixed from config.json
         requests = config.get('requests', [])
         base_url = config.get('baseUrl')
         peak_users = config.get('peakUsers', 10)

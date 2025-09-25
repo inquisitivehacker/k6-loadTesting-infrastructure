@@ -1,8 +1,8 @@
 {
-  "baseUrl": "https://jsonplaceholder.typicode.com",
-  "requestName": "Post1",
-  "requestMethod": "POST",
-  "endpoint": "/posts",
-  "testType": "smoke",
-  "timestamp": "2025-09-19T10:00:53.580Z"
+  "baseUrl": "https://step-game-app-jvzwm.ondigitalocean.app",
+  "requestName": "pendreq",
+  "requestMethod": "GET",
+  "endpoint": "/api/app/friends/get-pending-requests/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBVc2VySWQiOiIyMDYifQ.lssMBe2s4kRdYlUCeMl1RBj2Zwe1W9RdvKt5rQeqB1w",
+  "testType": "soak",
+  "timestamp": "2025-09-24T15:16:18.609Z"
 }

@@ -17,11 +17,12 @@
     .container{max-width:1180px; margin:24px auto 48px; padding:0 16px;}
     header{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;}
     .brand{display:flex; align-items:center; ;}
-    .logo{width: 100px; height: px; object-fit: contain; margin-top: -4px}
+    .logo{width: 180px; height: px; object-fit: contain; margin-top: -2px}
     h1{font-size:36px; margin:0;}
     .sub{font-size:12px; color:var(--muted); margin-top:2px;}
     .meta {
       display: grid;
+      flex-shrink: 1;
       grid-template-columns: repeat(8, auto); /* 4 label-value pairs per row */
       border-collapse: collapse;
       font-size: 14px;
@@ -75,7 +76,6 @@
       </div>
       <div class="brand">
         <img src="./logo.png" alt="Company Logo" class="logo" onerror="this.style.display='none';"/>
-        <img src="./thirdeye.png" alt="Company Logo" class="logo" onerror="this.style.display='none';"/>
       </div>
     </header>
 
@@ -160,7 +160,22 @@
     $('#meta-test-type').textContent = meta.testType ? meta.testType.charAt(0).toUpperCase() + meta.testType.slice(1) : '—';
     $('#meta-method').textContent = meta.requestMethod || '—';
     $('#meta-base-url').textContent = meta.baseUrl || '—';
-    $('#meta-endpoint').textContent = meta.endpoint || '—';
+    
+    // --- Start of new logic ---
+    let endpointToDisplay = meta.endpoint || '—';
+    const parts = endpointToDisplay.split('/');
+    const lastPart = parts[parts.length - 1];
+  
+    // Heuristic to detect a JWT: check if it's a long string containing dots.
+    if (lastPart.length > 50 && lastPart.includes('.')) {
+      // Replace the long token with a clean placeholder
+      parts[parts.length - 1] = '{token}'; 
+      endpointToDisplay = parts.join('/');
+    }
+    
+    $('#meta-endpoint').textContent = endpointToDisplay;
+    // --- End of new logic ---
+    
     const date = meta.timestamp ? new Date(meta.timestamp) : new Date();
     $('#meta-date').textContent = new Intl.DateTimeFormat(undefined, { year:'numeric', month:'short', day:'2-digit', hour: '2-digit', minute: '2-digit' }).format(date);
   }
