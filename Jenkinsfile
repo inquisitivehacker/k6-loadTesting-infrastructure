@@ -1,13 +1,6 @@
-@Library('my-shared-library') _
+// Use the correct library name you configured in Jenkins
+@Library('jenkins-shared-library') _
 
-pipeline {
-    agent { label 'debian-master' }
-    stages {
-        stage('Run SonarQube Analysis') {
-            steps {
-                checkout scm
-                sonarScan()
-            }
-        }
-    }
-}
+// Call the central pipeline function.
+// Since this project has no build steps, we don't pass any commands.
+ciPipeline()
