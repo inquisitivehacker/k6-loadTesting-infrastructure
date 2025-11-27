@@ -1,25 +1,43 @@
 {
-  "baseUrl": "https://pokeapi.co",
+  "baseUrl": "https://httpbin.org",
   "peakUsers": 3,
   "requests": [
     {
-      "name": "charizard",
-      "method": "GET",
-      "endpoint": "/api/v2/pokemon/charizard",
+      "name": "01_form_login",
+      "method": "POST",
+      "endpoint": "/post",
       "testTypes": ["smoke"],
-      "authToken": "MY_DUMMY_TOKEN",
-      "thresholds": {
-  "http_req_duration": ["p(95)<2000"]
-      }
+      "contentType": "application/x-www-form-urlencoded",
+      "payload": {
+        "username": "admin",
+        "password": "password123"
+      },
+      "thresholds": { "http_req_failed": ["rate<0.01"] }
     },
     {
-      "name": "blastoise",
-      "method": "GET",
-      "endpoint": "/api/v2/pokemon/blastoise",
+      "name": "02_update_user_put",
+      "method": "PUT",
+      "endpoint": "/put",
       "testTypes": ["smoke"],
-      "authToken": "MY_DUMMY_TOKEN",
-      "thresholds": {
-  "http_req_duration": ["p(95)<2000"]
+      "contentType": "application/json",
+      "payload": { "status": "active", "role": "admin" }
+    },
+    {
+      "name": "03_delete_resource",
+      "method": "DELETE",
+      "endpoint": "/delete",
+      "testTypes": ["smoke"],
+      "headers": { "X-Custom-Reason": "cleanup" }
+    },
+    {
+      "name": "04_search_query",
+      "method": "GET",
+      "endpoint": "/get",
+      "testTypes": ["smoke"],
+      "queryParams": {
+        "q": "search_term",
+        "page": "1",
+        "sort": "desc"
       }
     }
   ]
