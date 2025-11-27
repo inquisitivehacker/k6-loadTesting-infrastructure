@@ -1,0 +1,26 @@
+{
+  "baseUrl": "https://pokeapi.co",
+  "peakUsers": 3,
+  "requests": [
+    {
+      "name": "charizard",
+      "method": "GET",
+      "endpoint": "/api/v2/pokemon/charizard",
+      "testTypes": ["smoke"],
+      "authToken": "MY_DUMMY_TOKEN",
+      "thresholds": {
+  "http_req_duration": ["p(95)<2000"]
+      }
+    },
+    {
+      "name": "blastoise",
+      "method": "GET",
+      "endpoint": "/api/v2/pokemon/blastoise",
+      "testTypes": ["smoke"],
+      "authToken": "MY_DUMMY_TOKEN",
+      "thresholds": {
+  "http_req_duration": ["p(95)<2000"]
+      }
+    }
+  ]
+}

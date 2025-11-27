@@ -5,7 +5,24 @@ import json
 import re
 import asyncio
 import shutil
+import argparse  
 from jsonschema import validate, ValidationError
+
+# --- 1. SETUP & UTILS ---
+
+def load_secrets(project_dir):
+    """Loads .env file from the project directory into environment variables"""
+    env_path = os.path.join(project_dir, '.env')
+    if os.path.exists(env_path):
+        print(f"--- 🔑 Loading secrets from {env_path} ---")
+        with open(env_path) as f:
+            for line in f:
+                if line.strip() and not line.startswith('#'):
+                    try:
+                        key, value = line.strip().split('=', 1)
+                        os.environ[key] = value.strip().strip('"').strip("'")
+                    except ValueError: pass
+
 schema = {
     "type": "object",
     "properties": {
@@ -17,7 +34,7 @@ schema = {
                 "type": "object",
                 "properties": {
                     "name": {"type": "string"},
-                    "method": {"type": "string", "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"]},  # Restrict to common HTTP methods
+                    "method": {"type": "string", "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"]},
                     "endpoint": {"type": "string"},
                     "expectedStatus": {"type": "integer"},
                     "testTypes": {
@@ -26,35 +43,37 @@ schema = {
                     },
                     "payload": {"type": "object"},
                     "contentType": {"type": "string"},
-                    "authToken": {"type": "string"}
+                    "authToken": {"type": "string"},
+                    "thresholds": {"type": "object"}
                 },
-                "required": ["name", "method", "endpoint"]  # These must be present in every request
+                "required": ["name", "method", "endpoint"]
             }
         }
     },
-    "required": ["baseUrl", "peakUsers", "requests"]  # Top-level required fields
+    "required": ["baseUrl", "peakUsers", "requests"]
 }
+
 def validate_config(config_data):
     try:
         validate(instance=config_data, schema=schema)
         print("--- ✅ Config validated successfully ---")
     except ValidationError as e:
         print(f"--- ❌ Config validation failed: {e.message} ---")
-        sys.exit(1)  # Exit the script to prevent bad runs
-        
+        sys.exit(1)
+
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+# --- 2. PDF GENERATION (Playwright) ---
 try:
     from playwright.async_api import async_playwright
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
 async def generate_pdf_from_dashboard(dashboard_url, pdf_path):
     if not PLAYWRIGHT_AVAILABLE:
-        print("\n--- ⚠️ PDF Generation Skipped ---")
-        print("--- Please run 'pip install playwright' and 'playwright install' to enable this feature. ---")
+        print("\n--- ⚠️ PDF Generation Skipped (Playwright not installed) ---")
         return
 
     try:
@@ -64,123 +83,24 @@ async def generate_pdf_from_dashboard(dashboard_url, pdf_path):
             context = await browser.new_context(viewport={"width": 1440, "height": 1056})
             page = await context.new_page()
 
-            # Emulate print media and inject CSS for layout fixes
             await page.emulate_media(media="print")
+            # Inject CSS to fix print layout
             await page.add_style_tag(content="""
                 @media print {
-    body { 
-        margin: 0; 
-        padding: 0; 
-        font-size: 9pt; 
-        background: #fff !important; 
-        color: #000 !important;
-    }
-
-    /* Generic grid */
-    .grid { 
-        display: grid !important;
-        gap: 5mm;
-    }
-
-    /* KPIs: 4 per row */
-    .grid.kpi { 
-        grid-template-columns: repeat(4, 1fr) !important; 
-    }
-
-    /* Charts: 2 side by side */
-    .grid.two { 
-        grid-template-columns: repeat(2, 1fr) !important;
-        page-break-inside: avoid;
-    }
-
-    /* APIs: 3 per row (clean grid like screenshot) */
-    .grid.three { 
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 6mm !important;
-        page-break-inside: avoid;
-    }
-
-    /* Section & card adjustments */
-    section, .card { 
-        page-break-inside: avoid;
-        page-break-after: auto;
-        margin: 2mm 0;
-        padding: 3mm; 
-        box-shadow: none; 
-        border: 1px solid #ddd;
-        border-radius: 6px;
-    }
-
-    /* Chart size */
-    canvas { 
-        width: 100% !important; 
-        height: auto !important; 
-        max-height: 95mm;
-    }
-
-    /* API card compact styling */
-    .api-card {
-        padding: 6px 8px !important;
-        font-size: 9pt !important;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        height: auto;
-        break-inside: avoid;
-    }
-
-    .api-card h3 {
-        font-size: 11pt !important;
-        margin: 0 0 4px 0 !important;
-    }
-
-    .api-card .kpi {
-        display: flex;
-        justify-content: space-between;
-        margin: 2px 0;
-        padding: 0;
-    }
-
-    .api-card .kpi .label {
-        font-size: 8pt !important;
-        color: #666;
-    }
-
-    .api-card .kpi .value {
-        font-size: 10pt !important;
-        font-weight: 600;
-    }
-
-    /* Alternate shading for readability */
-    .api-card:nth-child(even) {
-        background: #f9f9f9 !important;
-    }
-
-    /* Hide non-essentials */
-    .chip, .subtitle, .filter, input { 
-        display: none !important;
-    }
-
-    /* Page size/orientation */
-    @page { 
-        size: A4 landscape;
-        margin: 8mm;
-    }
-
-    /* Avoid orphan/widow headers */
-    h1, h2, h3 { 
-        page-break-after: avoid; 
-    }
-}
-
-    /* Force break before API details if needed */
-    .api-details-section { /* Add this class to the APIs detail container in HTML if possible */
-        page-break-before: always;
-    }
-}
+                    body { margin: 0; padding: 0; font-size: 9pt; background: #fff !important; color: #000 !important; }
+                    .grid { display: grid !important; gap: 5mm; }
+                    .grid.kpi { grid-template-columns: repeat(4, 1fr) !important; }
+                    .grid.two { display: block !important; page-break-inside: avoid; margin-bottom: 20px; }
+                    .grid.three { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6mm !important; }
+                    section, .card { break-inside: avoid; margin: 2mm 0; padding: 3mm; box-shadow: none; border: 1px solid #ddd; border-radius: 6px; }
+                    canvas { width: 100% !important; height: auto !important; max-height: 80mm !important; }
+                    .chip, .subtitle, .toolbar, input { display: none !important; }
+                    @page { size: A4 landscape; margin: 8mm; }
+                }
             """)
 
             await page.goto(dashboard_url, wait_until="networkidle", timeout=60000)
-            await page.wait_for_timeout(10000)  # Longer for JS/charts to settle
+            await page.wait_for_timeout(5000) # Give charts time to animate
             await page.pdf(
                 path=pdf_path,
                 format="A4",
@@ -194,398 +114,93 @@ async def generate_pdf_from_dashboard(dashboard_url, pdf_path):
         os.chmod(pdf_path, 0o644)
         print(f"--- ✅ PDF report saved to {pdf_path} ---")
     except Exception as e:
-        print(f"\n--- ❌ An error occurred during PDF generation: {e} ---")
-        if 'page' in locals() and page:
-            try:
-                await page.screenshot(path='debug.png', timeout=10000)
-                print("--- Debug screenshot saved to debug.png ---")
-            except Exception as se:
-                print(f"--- ❌ Screenshot failed: {se} ---")
-        print("--- Ensure the web-server container is running. ---")
-        
+        print(f"\n--- ❌ PDF Generation Error: {e} ---")
+
+# --- 3. HTML REPORT GENERATION ---
 def generate_comprehensive_dashboard(report_list, output_path):
-    report_json = json.dumps(report_list)
-
-    template = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Comprehensive Performance Report</title>
-  <link rel="icon" type="image/png" href="/favicon.png" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    :root {
-      --bg: #ffffff;
-      --panel: #ffffff;
-      --card: #ffffff;
-      --muted: #475569;
-      --text: #0f172a;
-      --accent: #2563eb;
-      --success: #4088d9;
-      --warn: #d97706;
-      --error: #dc2626;
-      --link: #2563eb;
-      --chip: #eef2f7;
-      --border: #e6e6e6;
-      --shadow: none;
-    }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial; /* Slightly smaller font */
-    }
-    .wrap { max-width:1180px; margin:12px auto 24px; padding:0 8px; } /* Reduced margins and padding */
-    header {
-      position: sticky; top: 0; z-index: 10;
-      backdrop-filter: saturate(180%) blur(10px);
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-    }
-    .bar { 
-      max-width:1180px; 
-      margin:0 auto; 
-      display:flex; 
-      gap:8px; 
-      align-items:center; 
-      padding:8px 12px; 
-      position: relative; /* Contain absolute logo */
-    }
-    .logo {
-      position: absolute;
-      top: 1px;   /* Align with .bar padding */
-      right: 10px;  /* Align with .bar padding */
-      height: 40px; /* Fixed height for consistency; width: auto scales proportionally */
-      width: auto;
-    }
-    .title { 
-      font-weight:700; 
-      letter-spacing:.1px; 
-      font-size: 18px; 
-      margin: 0;
-      margin-right: 200px; /* Prevent overlap with logo if wide */
-    }
-    .subtitle { color: var(--muted); font-size:11px; }
-    .chip { background: var(--chip); border: 1px solid var(--border); color: var(--text); padding:4px 8px; border-radius:999px; font-size:10px; } /* Reduced padding and font */
-    .grid { display:grid; gap:8px; } /* Reduced gap */
-    .grid.kpi { grid-template-columns: repeat(4, minmax(0,1fr)); }
-    .grid.two { grid-template-columns: repeat(2, minmax(0,1fr)); }
-    .grid.three { grid-template-columns: repeat(3, minmax(0,1fr)); }
-    @media (max-width:1100px) {
-      .grid.kpi { grid-template-columns: repeat(2, minmax(0,1fr)); }
-      .grid.two, .grid.three { grid-template-columns: repeat(1, minmax(0,1fr)); }
-    }
-    section {
-      background: var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px 8px 6px; /* Reduced padding and radius */
-    }
-    .kpi {
-      background: var(--card); border:1px solid var(--border); border-radius:8px;
-      padding:8px 8px 6px; display:flex; align-items:baseline; justify-content:space-between; gap:4px; /* Reduced padding and gap */
-    }
-    .kpi .label { color: var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.05em; } /* Smaller font */
-    .kpi .value { font-size:18px; font-weight:700; } /* Slightly smaller value */
-    .chip { display:inline-block; }
-    .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom: 10px; } /* Reduced gap and margin */
-    .toolbar input {
-      background: var(--card); border:1px solid var(--border); border-radius:8px;
-      padding:6px 8px; color: var(--text); outline:none; min-width:200px; /* Reduced padding and width */
-    }
-    h1,h2,h3{ margin:0; }
-    h2{ font-size:16px; margin-bottom:6px; } /* Reduced font and margin */
-    .card {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius:8px;
-      padding:8px 8px 6px;
-      box-shadow: var(--shadow);
-    }
-    @media print {
-  body { 
-    margin: 0; 
-    padding: 0; 
-    font-size: 9pt; 
-  }
-
-  /* KPIs: keep 4 per row */
-  .grid.kpi { 
-    grid-template-columns: repeat(4, 1fr) !important; 
-    gap: 4mm !important;
-  }
-
-  /* Graphs: don't force side by side, keep natural layout (stacked) */
-  .grid.two { 
-    display: block !important; 
-    gap: 6mm !important;
-  }
-
-  /* API cards: enforce 3 per row (grid view) */
-  .grid.three { 
-    display: grid !important; 
-    grid-template-columns: repeat(3, 1fr) !important; 
-    gap: 6mm !important;
-  }
-
-  /* Cards and sections */
-  section, .card { 
-    break-inside: avoid; 
-    margin: 2mm 0; 
-    padding: 3mm; 
-    box-shadow: none; 
-    border: 1px solid #ddd;
-    border-radius: 6px;
-  }
-
-  /* Charts */
-  canvas { 
-    width: 100% !important; 
-    height: auto !important; 
-    max-height: 80mm !important; 
-  }
-
-  /* Hide UI elements not needed in PDF */
-  .chip, .subtitle, .toolbar, input { 
-    display: none !important; 
-  }
-
-  /* Header */
-  .bar, header { 
-    position: relative !important; 
-    padding: 2mm !important; 
-    border-bottom: 1px solid #ddd;
-  }
-
-  @page { 
-    size: A4 landscape; 
-    margin: 8mm; 
-  }
-}
-    section, .card { 
-        break-inside: avoid; 
-        margin: 2mm 0; padding: 2mm; /* Reduced margins and padding */
-        box-shadow: none; border: none;
-    }
-    .chip, .subtitle { display: none; }
-    .bar, header { position: relative !important; padding: 1mm !important; } /* Tighter header */
-    canvas { width: 100% !important; height: auto !important; max-height: 80mm !important; } /* Limit chart height */
-    @page { margin: 5mm; } /* Reduced page margins */
-    .toolbar { height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; } /* Collapse toolbar */
-    .api-card { display: flex; flex-direction: column; gap:6px; } /* Reduced gap */
-    .api-head { display: flex; justify-content: space-between; align-items: center; gap:6px; } /* Reduced gap */
-  </style>
-</head>
-<body>
-  <header>
-    <div class="bar">
-      <img src="./logo.png" alt="Company Logo" class="logo" onerror="this.style.display='none';" width="80px" height="80px" /> <!-- Reduced size -->
-      <h1 class="title">Comprehensive Performance Report</h1>
-    </div>
-  </header>
-  <div class="wrap">
-    <section class="toolbar">
-      <input type="text" id="filter" placeholder="Filter by API name or endpoint...">
-      <p class="subtitle">Use the search bar to browse API tests.</p>
-    </section>
-    <div class="grid two">
-      <div class="card">
-        <h2>Latency comparison</h2>
-        <canvas id="latencyChart"></canvas>
-        <div class="chip">
-          Avg <span style="color:var(--accent)">●</span>
-          P90 <span style="color:var(--success)">●</span>
-          P95 <span style="color:var(--error)">●</span>
-        </div>
-      </div>
-      <div class="card">
-        <h2>Reliability and throughput</h2>
-        <canvas id="reliabilityChart"></canvas>
-        <div class="chip">
-          Error rate <span style="color:var(--error)">●</span>
-          RPS <span style="color:var(--success)">●</span>
-        </div>
-      </div>
-    </div>
-    <br>
-    <section>
-      <h2>APIs detail</h2>
-      <div id="apiCards" class="grid three"></div>
-    </section>
-    <p class="subtitle">Created by Third Eye Creative, All rights reserved.</p>
-  </div>
-
-  <script>
-    const reportList = """ + report_json + """;
-
-    let latencyChart;
-    let reliabilityChart;
-
-    async function loadData() {
-      const data = [];
-      for (const r of reportList) {
-        try {
-          const metaResp = await fetch(r.meta);
-          const meta = await metaResp.json();
-          const csvResp = await fetch(r.csv);
-          const csvText = await csvResp.text();
-          const metrics = parseCsv(csvText);
-          data.push({ meta, metrics });
-        } catch (e) {
-          console.error(`Failed to load ${r.csv} or ${r.meta}:`, e);
-        }
-      }
-      return data;
-    }
-
-    function parseCsv(text) {
-      const lines = text.split('\\n').slice(1).filter(line => line.trim());
-      const result = {};
-      lines.forEach(line => {
-        const [metric, type, valueStr] = line.split(',', 3);
-        const cleanedValue = valueStr.trim().replace(/^"|"$/g, '');
-        if (!result[metric]) result[metric] = { type };
-        const [key, val] = cleanedValue.split('=');
-        result[metric][key] = isNaN(parseFloat(val)) ? val : parseFloat(val);
-      });
-      return result;
-    }
-
-    function renderCharts(filteredData) {
-      const labels = filteredData.map(d => `${d.meta.requestName} (${d.meta.testType})`);
-
-      if (latencyChart) latencyChart.destroy();
-      const latencyCtx = document.getElementById('latencyChart').getContext('2d');
-      latencyChart = new Chart(latencyCtx, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            { label: 'Avg', data: filteredData.map(d => d.metrics.http_req_duration.avg), backgroundColor: '#2563eb' },
-            { label: 'P90', data: filteredData.map(d => d.metrics.http_req_duration['p(90)']), backgroundColor: '#4088d9' },
-            { label: 'P95', data: filteredData.map(d => d.metrics.http_req_duration['p(95)']), backgroundColor: '#ef4444' }
-          ]
-        },
-        options: {
-          responsive: true,
-          scales: { y: { beginAtZero: true, title: { display: true, text: 'ms' } } }
-        }
-      });
-
-      if (reliabilityChart) reliabilityChart.destroy();
-      const reliabilityCtx = document.getElementById('reliabilityChart').getContext('2d');
-      reliabilityChart = new Chart(reliabilityCtx, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            { label: 'Error Rate (%)', data: filteredData.map(d => (d.metrics.http_req_failed ? d.metrics.http_req_failed.rate * 100 : 0)), backgroundColor: '#ef4444' },
-            { label: 'RPS', data: filteredData.map(d => d.metrics.http_reqs.rate), backgroundColor: '#2563eb' }
-          ]
-        },
-        options: {
-          responsive: true,
-          scales: { y: { beginAtZero: true } }
-        }
-      });
-    }
-
-    function renderCards(filteredData) {
-      const container = document.getElementById('apiCards');
-      container.innerHTML = '';
-      filteredData.forEach(d => {
-        const card = document.createElement('div');
-        card.className = 'card api-card';
-        card.innerHTML = `
-          <div class="api-head">
-            <h3>${d.meta.requestName} (${d.meta.testType})</h3>
-            <span class="chip">${d.meta.requestMethod} ${d.meta.endpoint}</span>
-          </div>
-            <div class="kpi">
-              <div class="label">Total Requests</div>
-              <div class="value">${Math.round(d.metrics.http_reqs.count || 0)}</div>
-            </div>
-            <div class="kpi">
-              <div class="label">Avg Response (ms)</div>
-              <div class="value">${d.metrics.http_req_duration.avg.toFixed(2)}</div>
-            </div>
-            <div class="kpi">
-              <div class="label">Failure Rate</div>
-              <div class="value">${(d.metrics.http_req_failed ? (d.metrics.http_req_failed.rate * 100).toFixed(2) : 0)}%</div>
-            </div>
-            <div class="kpi">
-              <div class="label">Max VUs</div>
-              <div class="value">${d.metrics.vus_max.value || 'N/A'}</div>
-            </div>
-        `;
-        container.appendChild(card);
-      });
-    }
-
-    window.onload = async () => {
-      const data = await loadData();
-      if (data.length === 0) {
-        console.error('No data loaded from reports');
-        return;
-      }
-      renderCharts(data);
-      renderCards(data);
-
-      const filterInput = document.getElementById('filter');
-      filterInput.addEventListener('input', () => {
-        const term = filterInput.value.toLowerCase();
-        const filtered = data.filter(d =>
-          d.meta.requestName.toLowerCase().includes(term) ||
-          d.meta.endpoint.toLowerCase().includes(term)
-        );
-        renderCharts(filtered);
-        renderCards(filtered);
-      });
-    };
-  </script>
-</body>
-</html>
-    """
-
-    with open(output_path, 'w') as f:
-        f.write(template)
-    os.chmod(output_path, 0o644)
+    template_path = 'scripts/templates/multi_report.html'
     
+    if not os.path.exists(template_path):
+        print(f"⚠️ Template missing: {template_path}")
+        return
+
+    try:
+        with open(template_path, 'r') as f:
+            html_content = f.read()
+            
+        # Inject data into the template placeholder
+        json_data = json.dumps(report_list)
+        final_html = html_content.replace('{{REPORT_LIST_JSON}}', json_data)
+        
+        with open(output_path, 'w') as f:
+            f.write(final_html)
+        os.chmod(output_path, 0o644)
+        print(f"--- ✅ HTML Dashboard generated at {output_path} ---")
+    except Exception as e:
+        print(f"--- ❌ HTML Generation Error: {e} ---")
+
+# --- 4. MAIN EXECUTION ---
 def main():
     clear_screen()
+    
+    # A. Argument Parsing
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True, help="Path to the config.json file")
+    args = parser.parse_args()
+    config_path = args.config
+
+    # B. Environment Setup
+    if not os.path.exists(config_path):
+        print(f"❌ Error: Config file not found at {config_path}")
+        sys.exit(1)
+
+    project_dir = os.path.dirname(os.path.abspath(config_path))
+    load_secrets(project_dir)
+
+    # C. Restore Single Report Template (Vital for Dashboard Viewer)
+    single_template = 'scripts/templates/single_report.html'
+    if os.path.exists(single_template):
+        if not os.path.exists('results'):
+            os.makedirs('results')
+        shutil.copy(single_template, 'results/dashboardgenerator.html')
+    else:
+        print(f"⚠️ Warning: Single report template not found at {single_template}")
+
+    # D. Load Config
     try:
-        with open('config.json', 'r') as f:
+        with open(config_path, 'r') as f:
             config = json.load(f)
-        validate_config(config)  # Fixed from config.json
-        requests = config.get('requests', [])
-        base_url = config.get('baseUrl')
-        peak_users = config.get('peakUsers', 10)
-        if not requests or not base_url:
-            print("Error: 'config.json' must contain 'baseUrl' and a 'requests' list. Exiting.")
-            sys.exit(1)
+        validate_config(config)
     except (FileNotFoundError, json.JSONDecodeError) as e:
         print(f"Error reading 'config.json': {e}. Exiting.")
         sys.exit(1)
 
-    print(f"✅ Base URL loaded from config: {base_url}")
+    base_url = config.get('baseUrl')
+    peak_users = config.get('peakUsers', 10)
+    requests = config.get('requests', [])
+    
+    print(f"✅ Base URL: {base_url}")
     print(f"✅ Peak Users: {peak_users}")
-    print(f"✅ Total Requests to Test: {len(requests)}\n")
+    print(f"✅ Requests: {len(requests)}\n")
 
-    is_single_request = len(requests) == 1
-
-    print("\n--- Starting web server... ---")
+    # E. Ensure Web Server is Up
+    print("\n--- 🐢 Checking Web Server... ---")
     try:
-        subprocess.run(["docker", "compose", "up", "-d", "--build", "web-server"], check=True)
-        print(f"Web server is running on http://localhost:8069/")
-    except subprocess.CalledProcessError as e:
-        print(f"Error starting web server: {e}. Exiting.")
-        sys.exit(1)
+        subprocess.run(["docker", "compose", "up", "-d", "web-server"], check=True)
+    except subprocess.CalledProcessError:
+        print("Warning: Could not start web-server.")
 
     report_list = []
+    is_single_request = len(requests) == 1
 
+    # F. Run Tests
     for req_idx, chosen_request in enumerate(requests):
         test_types = chosen_request.get('testTypes', ['smoke'])
-        auth_token = chosen_request.get('authToken', '')
+        
+        # Security & Reliability Logic
+        token_key = chosen_request.get('authToken', '')
+        resolved_token = os.environ.get(token_key, token_key) 
+        thresholds_json = json.dumps(chosen_request.get('thresholds', {}))
 
         for test_type in test_types:
             print("\n=========================================================")
@@ -593,12 +208,19 @@ def main():
             print(f"  Scaling for {peak_users} peak VUs")
             print("=========================================================\n")
 
+            # 1. PRE-CALCULATE FILENAMES (Do this BEFORE running)
+            sanitized_name = re.sub(r'[^a-z0-9_.-]', '_', chosen_request['name'].lower())
+            report_base_name = f"{sanitized_name}-{chosen_request['method'].lower()}-{test_type}"
+            csv_path = f"{report_base_name}-results.csv"
+            meta_path = f"{report_base_name}-metadata.json"
+
             env_vars = {
                 "BASE_URL": base_url,
                 "ENDPOINT": chosen_request['endpoint'],
                 "REQUEST_METHOD": chosen_request['method'],
                 "REQUEST_NAME": chosen_request['name'],
-                "AUTH_TOKEN": auth_token,
+                "AUTH_TOKEN": resolved_token,
+                "THRESHOLDS": thresholds_json,
                 "TEST_TYPE": test_type,
                 "PEAK_VUS": str(peak_users),
                 "REQUEST_PAYLOAD": json.dumps(chosen_request.get('payload', {})),
@@ -613,57 +235,58 @@ def main():
                 command.extend(["-e", f"{key}={value}"])
             command.append("k6")
 
+            # 2. RUN TEST (Allow failure)
             try:
                 subprocess.run(command, check=True)
+                print(f"\n--- ✅ {test_type.title()} Test Passed ---")
+            except subprocess.CalledProcessError as e:
+                print(f"\n--- ⚠️ {test_type.title()} Test Finished with Threshold Failures (Exit {e.returncode}) ---")
+                # We do NOT continue/skip here. We proceed to check for results.
 
-                results_dir = './results'
-                if os.path.isdir(results_dir):
-                    for filename in os.listdir(results_dir):
-                        file_path = os.path.join(results_dir, filename)
-                        if os.path.isfile(file_path):
-                            os.chmod(file_path, 0o644)
-                
-                print(f"\n--- ✅ {test_type.title()} Test Finished ---")
-                
-                sanitized_name = re.sub(r'[^a-z0-9_.-]', '_', chosen_request['name'].lower())
-                report_base_name = f"{sanitized_name}-{chosen_request['method'].lower()}-{test_type}"
-                csv_path = f"{report_base_name}-results.csv"
-                meta_path = f"{report_base_name}-metadata.json"
-                
+            # 3. COLLECT RESULTS (Check if files exist)
+            results_dir = './results'
+            full_csv_path = os.path.join(results_dir, csv_path)
+            
+            if os.path.exists(full_csv_path):
+                # Ensure permissions
+                try:
+                    os.chmod(full_csv_path, 0o644)
+                    os.chmod(os.path.join(results_dir, meta_path), 0o644)
+                except: pass
+
+                # Add to report list
                 report_list.append({
                     "csv": csv_path,
                     "meta": meta_path
                 })
+                print(f"   📄 Collected results: {csv_path}")
 
+                # Update Single Dashboard if applicable
                 if is_single_request:
-                    shutil.copy(os.path.join(results_dir, csv_path), os.path.join(results_dir, 'latest_results.csv'))
+                    shutil.copy(full_csv_path, os.path.join(results_dir, 'latest_results.csv'))
                     shutil.copy(os.path.join(results_dir, meta_path), os.path.join(results_dir, 'metadata.json'))
                     
                     pdf_path = os.path.join(results_dir, f"{report_base_name}.pdf")
                     dashboard_url = "http://localhost:8069/dashboardgenerator.html"
                     asyncio.run(generate_pdf_from_dashboard(dashboard_url, pdf_path))
-                    print("--- Dashboard data updated for single request. Refresh your browser at http://localhost:8069/dashboardgenerator.html ---")
+                    print("--- Dashboard updated for single request. ---")
+            else:
+                print(f"❌ Critical Error: No results file found at {full_csv_path}")
 
-            except subprocess.CalledProcessError as e:
-                print(f"\n--- ❌ Error during {test_type.title()} Test on '{chosen_request['name']}': {e} ---")
-                print("--- Skipping this test and continuing... ---")
-                continue
-
+    # G. Generate Multi-Report
     if not is_single_request and report_list:
-        comp_html_path = os.path.join('./results', 'comprehensive_dashboard.html')
+        comp_html_path = os.path.join('results', 'comprehensive_report.html')
         generate_comprehensive_dashboard(report_list, comp_html_path)
-        print("\n--- ✅ Comprehensive dashboard generated at results/comprehensive_dashboard.html ---")
         
-        pdf_path = os.path.join('./results', 'comprehensive_report.pdf')
-        dashboard_url = "http://localhost:8069/comprehensive_dashboard.html"
+        pdf_path = os.path.join('results', 'comprehensive_report.pdf')
+        dashboard_url = "http://localhost:8069/comprehensive_report.html"
         asyncio.run(generate_pdf_from_dashboard(dashboard_url, pdf_path))
-        print("--- View comprehensive dashboard at http://localhost:8069/comprehensive_dashboard.html ---")
 
-    print("\nAll tests have finished. Stopping web server...")
-    try:
-        subprocess.run(["docker", "compose", "down"], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error stopping web server: {e}. Server may still be running.")
+    # H. Cleanup (Optional: Comment out to keep server running)
+    print("\n--- 🏁 All tests complete. ---")
+    # try:
+    #     subprocess.run(["docker", "compose", "down"], check=True)
+    # except: pass
 
 if __name__ == "__main__":
     main()

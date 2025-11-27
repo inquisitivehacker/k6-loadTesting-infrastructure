@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Comprehensive Performance Report</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --card: #ffffff;
+      --muted: #475569;
+      --text: #0f172a;
+      --accent: #2563eb;
+      --success: #4088d9;
+      --warn: #d97706;
+      --error: #dc2626;
+      --link: #2563eb;
+      --chip: #eef2f7;
+      --border: #e6e6e6;
+      --shadow: none;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial; /* Slightly smaller font */
+    }
+    .wrap { max-width:1180px; margin:12px auto 24px; padding:0 8px; } /* Reduced margins and padding */
+    header {
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: saturate(180%) blur(10px);
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+    .bar { 
+      max-width:1180px; 
+      margin:0 auto; 
+      display:flex; 
+      gap:8px; 
+      align-items:center; 
+      padding:8px 12px; 
+      position: relative; /* Contain absolute logo */
+    }
+    .logo {
+      position: absolute;
+      top: 1px;   /* Align with .bar padding */
+      right: 10px;  /* Align with .bar padding */
+      height: 40px; /* Fixed height for consistency; width: auto scales proportionally */
+      width: auto;
+    }
+    .title { 
+      font-weight:700; 
+      letter-spacing:.1px; 
+      font-size: 18px; 
+      margin: 0;
+      margin-right: 200px; /* Prevent overlap with logo if wide */
+    }
+    .subtitle { color: var(--muted); font-size:11px; }
+    .chip { background: var(--chip); border: 1px solid var(--border); color: var(--text); padding:4px 8px; border-radius:999px; font-size:10px; } /* Reduced padding and font */
+    .grid { display:grid; gap:8px; } /* Reduced gap */
+    .grid.kpi { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    .grid.two { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    @media (max-width:1100px) {
+      .grid.kpi { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .grid.two, .grid.three { grid-template-columns: repeat(1, minmax(0,1fr)); }
+    }
+    section {
+      background: var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px 8px 6px; /* Reduced padding and radius */
+    }
+    .kpi {
+      background: var(--card); border:1px solid var(--border); border-radius:8px;
+      padding:8px 8px 6px; display:flex; align-items:baseline; justify-content:space-between; gap:4px; /* Reduced padding and gap */
+    }
+    .kpi .label { color: var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.05em; } /* Smaller font */
+    .kpi .value { font-size:18px; font-weight:700; } /* Slightly smaller value */
+    .chip { display:inline-block; }
+    .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom: 10px; } /* Reduced gap and margin */
+    .toolbar input {
+      background: var(--card); border:1px solid var(--border); border-radius:8px;
+      padding:6px 8px; color: var(--text); outline:none; min-width:200px; /* Reduced padding and width */
+    }
+    h1,h2,h3{ margin:0; }
+    h2{ font-size:16px; margin-bottom:6px; } /* Reduced font and margin */
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius:8px;
+      padding:8px 8px 6px;
+      box-shadow: var(--shadow);
+    }
+    @media print {
+  body { 
+    margin: 0; 
+    padding: 0; 
+    font-size: 9pt; 
+  }
+
+  /* KPIs: keep 4 per row */
+  .grid.kpi { 
+    grid-template-columns: repeat(4, 1fr) !important; 
+    gap: 4mm !important;
+  }
+
+  /* Graphs: don't force side by side, keep natural layout (stacked) */
+  .grid.two { 
+    display: block !important; 
+    gap: 6mm !important;
+  }
+
+  /* API cards: enforce 3 per row (grid view) */
+  .grid.three { 
+    display: grid !important; 
+    grid-template-columns: repeat(3, 1fr) !important; 
+    gap: 6mm !important;
+  }
+
+  /* Cards and sections */
+  section, .card { 
+    break-inside: avoid; 
+    margin: 2mm 0; 
+    padding: 3mm; 
+    box-shadow: none; 
+    border: 1px solid #ddd;
+    border-radius: 6px;
+  }
+
+  /* Charts */
+  canvas { 
+    width: 100% !important; 
+    height: auto !important; 
+    max-height: 80mm !important; 
+  }
+
+  /* Hide UI elements not needed in PDF */
+  .chip, .subtitle, .toolbar, input { 
+    display: none !important; 
+  }
+
+  /* Header */
+  .bar, header { 
+    position: relative !important; 
+    padding: 2mm !important; 
+    border-bottom: 1px solid #ddd;
+  }
+
+  @page { 
+    size: A4 landscape; 
+    margin: 8mm; 
+  }
+}
+    section, .card { 
+        break-inside: avoid; 
+        margin: 2mm 0; padding: 2mm; /* Reduced margins and padding */
+        box-shadow: none; border: none;
+    }
+    .chip, .subtitle { display: none; }
+    .bar, header { position: relative !important; padding: 1mm !important; } /* Tighter header */
+    canvas { width: 100% !important; height: auto !important; max-height: 80mm !important; } /* Limit chart height */
+    @page { margin: 5mm; } /* Reduced page margins */
+    .toolbar { height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; } /* Collapse toolbar */
+    .api-card { display: flex; flex-direction: column; gap:6px; } /* Reduced gap */
+    .api-head { display: flex; justify-content: space-between; align-items: center; gap:6px; } /* Reduced gap */
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <img src="./logo.png" alt="Company Logo" class="logo" onerror="this.style.display='none';" width="80px" height="80px" /> <!-- Reduced size -->
+      <h1 class="title">Comprehensive Performance Report</h1>
+    </div>
+  </header>
+  <div class="wrap">
+    <section class="toolbar">
+      <input type="text" id="filter" placeholder="Filter by API name or endpoint...">
+      <p class="subtitle">Use the search bar to browse API tests.</p>
+    </section>
+    <div class="grid two">
+      <div class="card">
+        <h2>Latency comparison</h2>
+        <canvas id="latencyChart"></canvas>
+        <div class="chip">
+          Avg <span style="color:var(--accent)">●</span>
+          P90 <span style="color:var(--success)">●</span>
+          P95 <span style="color:var(--error)">●</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Reliability and throughput</h2>
+        <canvas id="reliabilityChart"></canvas>
+        <div class="chip">
+          Error rate <span style="color:var(--error)">●</span>
+          RPS <span style="color:var(--success)">●</span>
+        </div>
+      </div>
+    </div>
+    <br>
+    <section>
+      <h2>APIs detail</h2>
+      <div id="apiCards" class="grid three"></div>
+    </section>
+    <p class="subtitle">Created by Third Eye Creative, All rights reserved.</p>
+  </div>
+
+  <script>
+    const reportList = {{REPORT_LIST_JSON}};
+    let latencyChart;
+    let reliabilityChart;
+
+    async function loadData() {
+      const data = [];
+      for (const r of reportList) {
+        try {
+          const metaResp = await fetch(r.meta);
+          const meta = await metaResp.json();
+          const csvResp = await fetch(r.csv);
+          const csvText = await csvResp.text();
+          const metrics = parseCsv(csvText);
+          data.push({ meta, metrics });
+        } catch (e) {
+          console.error(`Failed to load ${r.csv} or ${r.meta}:`, e);
+        }
+      }
+      return data;
+    }
+
+    function parseCsv(text) {
+      const lines = text.split('\n').slice(1).filter(line => line.trim());
+      const result = {};
+      lines.forEach(line => {
+        const [metric, type, valueStr] = line.split(',', 3);
+        const cleanedValue = valueStr.trim().replace(/^"|"$/g, '');
+        if (!result[metric]) result[metric] = { type };
+        const [key, val] = cleanedValue.split('=');
+        result[metric][key] = isNaN(parseFloat(val)) ? val : parseFloat(val);
+      });
+      return result;
+    }
+
+    function renderCharts(filteredData) {
+      const labels = filteredData.map(d => `${d.meta.requestName} (${d.meta.testType})`);
+
+      if (latencyChart) latencyChart.destroy();
+      const latencyCtx = document.getElementById('latencyChart').getContext('2d');
+      latencyChart = new Chart(latencyCtx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Avg', data: filteredData.map(d => d.metrics.http_req_duration.avg), backgroundColor: '#2563eb' },
+            { label: 'P90', data: filteredData.map(d => d.metrics.http_req_duration['p(90)']), backgroundColor: '#4088d9' },
+            { label: 'P95', data: filteredData.map(d => d.metrics.http_req_duration['p(95)']), backgroundColor: '#ef4444' }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true, title: { display: true, text: 'ms' } } }
+        }
+      });
+
+      if (reliabilityChart) reliabilityChart.destroy();
+      const reliabilityCtx = document.getElementById('reliabilityChart').getContext('2d');
+      reliabilityChart = new Chart(reliabilityCtx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Error Rate (%)', data: filteredData.map(d => (d.metrics.http_req_failed ? d.metrics.http_req_failed.rate * 100 : 0)), backgroundColor: '#ef4444' },
+            { label: 'RPS', data: filteredData.map(d => d.metrics.http_reqs.rate), backgroundColor: '#2563eb' }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    function renderCards(filteredData) {
+      const container = document.getElementById('apiCards');
+      container.innerHTML = '';
+      filteredData.forEach(d => {
+        const card = document.createElement('div');
+        card.className = 'card api-card';
+        card.innerHTML = `
+          <div class="api-head">
+            <h3>${d.meta.requestName} (${d.meta.testType})</h3>
+            <span class="chip">${d.meta.requestMethod} ${d.meta.endpoint}</span>
+          </div>
+            <div class="kpi">
+              <div class="label">Total Requests</div>
+              <div class="value">${Math.round(d.metrics.http_reqs.count || 0)}</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Avg Response (ms)</div>
+              <div class="value">${d.metrics.http_req_duration.avg.toFixed(2)}</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Failure Rate</div>
+              <div class="value">${(d.metrics.http_req_failed ? (d.metrics.http_req_failed.rate * 100).toFixed(2) : 0)}%</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Max VUs</div>
+              <div class="value">${d.metrics.vus_max.value || 'N/A'}</div>
+            </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    window.onload = async () => {
+      const data = await loadData();
+      if (data.length === 0) {
+        console.error('No data loaded from reports');
+        return;
+      }
+      renderCharts(data);
+      renderCards(data);
+
+      const filterInput = document.getElementById('filter');
+      filterInput.addEventListener('input', () => {
+        const term = filterInput.value.toLowerCase();
+        const filtered = data.filter(d =>
+          d.meta.requestName.toLowerCase().includes(term) ||
+          d.meta.endpoint.toLowerCase().includes(term)
+        );
+        renderCharts(filtered);
+        renderCards(filtered);
+      });
+    };
+  </script>
+</body>
+</html>

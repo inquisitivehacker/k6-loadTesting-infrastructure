@@ -15,6 +15,7 @@ const requestPayload = __ENV.REQUEST_PAYLOAD;
 const contentType = __ENV.CONTENT_TYPE;
 const expectedStatus = parseInt(__ENV.EXPECTED_STATUS);
 const peakVUs = parseInt(__ENV.PEAK_VUS);
+const customThresholds = JSON.parse(__ENV.THRESHOLDS || '{}');
 const requestHeaders = JSON.parse(__ENV.REQUEST_HEADERS || '{}');
 const queryParams = JSON.parse(__ENV.QUERY_PARAMS || '{}');
 
@@ -32,7 +33,13 @@ const profiles = {
   soak: { executor: 'constant-vus', vus: Math.round(peakVUs * 0.8), duration: '3m' },
 };
 
-export const options = profiles[testType];
+export const options = {
+  ...profiles[testType],
+  thresholds: {
+    http_req_failed: ['rate<0.01'], // Global Safety: Fail if >1% errors
+    ...customThresholds // Merge project specific overrides
+  }
+};
 
 export default function () {
   const tags = { name: targetUrl, test_type: testType };
@@ -78,6 +85,7 @@ export function handleSummary(data) {
     [`/results/${reportFilename}-results.csv`]: jsonToCsv(data),
     [`/results/${reportFilename}-metadata.json`]: JSON.stringify(metadata, null, 2),
     [`/results/${reportFilename}.html`]: htmlReport(data, { title: `${requestName} - ${testType.charAt(0).toUpperCase() + testType.slice(1)} Test` }),
+    [`/results/${reportFilename}.xml`]: jUnit(data),
     'stdout': textSummary(data, { indent: ' ', enableColors: true }),
   };
 }

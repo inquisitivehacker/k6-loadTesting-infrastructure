@@ -1,6 +1,10 @@
 services:
   k6:
     image: grafana/k6:latest
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     command: run /scripts/test.js
     volumes:
       - ./scripts:/scripts

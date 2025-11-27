@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
     :root{
-      --primary: #2d6cdf; --muted: #667085; --border: #c6c6c6;
+      --primary: #2d6cdf; --muted: #667085; --border: #c6c6c6
       --bg: #ffffff; --card: #fafafa;
       --success: #4088d9;         /* Bluish color */
       --danger: #ef4444;          /* Red color */
@@ -235,8 +235,8 @@
   async function autoLoad() {
     try {
       const [csvResponse, metaResponse] = await Promise.all([
-        fetch('latest_results.csv', { cache: "no-store" }),
-        fetch('metadata.json', { cache: "no-store" })
+        fetch('latest_results.csv?t=' + Date.now(), { cache: "no-store" }),
+        fetch('metadata.json?t=' + Date.now(), { cache: "no-store" })
       ]);
       if (!csvResponse.ok) throw new Error('Could not find latest_results.csv. Run a test first!');
       const csvText = await csvResponse.text();
